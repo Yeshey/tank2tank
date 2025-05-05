@@ -2,6 +2,8 @@
 
 Tank2tank with libp2p
 
+Access the site here: https://yeshey.github.io/tank2tank/
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

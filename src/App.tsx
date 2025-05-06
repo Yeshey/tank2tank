@@ -1,52 +1,58 @@
 import React, { Suspense, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import * as THREE from 'three'; // Import THREE
-import { Tank } from './components/game/Tank'; // Updated path
+import * as THREE from 'three';
+// Import Physics
+import { Physics } from '@react-three/rapier';
+import { Tank } from './components/game/Tank';
+import type { TankRef } from './components/game/Tank'; // Import TankRef type
 import { HomeScreen } from './components/HomeScreen';
-import { CameraRig } from './components/scene/CameraRig'; // Updated path
-import { SceneSetup } from './components/scene/SceneSetup'; // Updated path
+import { CameraRig } from './components/scene/CameraRig';
+import { SceneSetup } from './components/scene/SceneSetup';
 import './App.css';
 import './index.css';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [playerName, setPlayerName] = useState('');
-  const tankRef = useRef<THREE.Group>(null);
+  // Ref now holds the TankRef type (or null)
+  const tankRef = useRef<TankRef>(null);
 
   const handleStartGame = (name: string) => {
     setPlayerName(name);
     setIsLoggedIn(true);
   };
 
-  // Correctly type or construct the camera props
   const initialCameraProps = {
-    // position: new THREE.Vector3(0, 12, 14), // Option 1: Use Vector3
-    position: [0, 12, 14] as [number, number, number], // Option 2: Type Assertion
+    position: [0, 12, 14] as [number, number, number],
     fov: 55
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden' }}> {/* Ensure container fills screen */}
+    <div style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden' }}>
       {!isLoggedIn ? (
         <HomeScreen onStart={handleStartGame} />
       ) : (
         <Canvas
           shadows
-          camera={initialCameraProps} // Use the typed props
+          camera={initialCameraProps}
           style={{ background: '#ffffff' }}
           gl={{ antialias: true }}
           dpr={[1, 2]}
         >
-          <Suspense fallback={null}>
-            {/* Setup Scene Elements */}
-            <SceneSetup />
+          {/* Wrap dynamic scene elements in Physics */}
+          <Physics gravity={[0, -9.81, 0]}> {/* Add gravity */}
+            <Suspense fallback={null}>
+              {/* Setup Scene Elements (Ground is now physics-based) */}
+              <SceneSetup />
 
-            {/* Game Objects */}
-            <Tank ref={tankRef} name={playerName} position={[0, 0, 0]} />
+              {/* Game Objects */}
+              <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} /> {/* Start slightly above ground */}
 
-            {/* Camera Controller */}
-            <CameraRig tankRef={tankRef} />
-          </Suspense>
+              {/* Camera Controller */}
+              {/* Pass the TankRef */}
+              <CameraRig tankRef={tankRef} />
+            </Suspense>
+          </Physics>
         </Canvas>
       )}
     </div>

@@ -1,9 +1,7 @@
 import React from 'react';
 import { Text } from '@react-three/drei';
-
-// Keep constants here or import
-const BODY_HEIGHT = 0.6;
-const TURRET_HEIGHT = 0.5;
+// Import constant for positioning
+import { NAME_TAG_Y_OFFSET } from '../../constants'; // Adjust path if needed
 
 interface PlayerNameTagProps {
     name: string;
@@ -13,7 +11,8 @@ interface PlayerNameTagProps {
 export function PlayerNameTag({ name, visible }: PlayerNameTagProps) {
     return (
         <Text
-            position={[0, BODY_HEIGHT + TURRET_HEIGHT + 0.5, 0]}
+            // Use constant for Y position
+            position={[0, NAME_TAG_Y_OFFSET, 0]}
             fontSize={0.4}
             color="black"
             anchorX="center"

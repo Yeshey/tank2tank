@@ -1,15 +1,17 @@
 import { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import type { TankRef } from '../game/Tank';
+// Import constants
+import {
+    BASE_CAMERA_OFFSET,
+    LOOK_AT_OFFSET,
+    MOUSE_INFLUENCE_FACTOR,
+    POSITION_LERP_FACTOR,
+    LOOK_AT_LERP_FACTOR
+} from '../../constants'; // Adjust path if needed
 
-// Camera settings
-const baseCameraOffset = new THREE.Vector3(0, 12, 14); // Increased Y and Z for higher/further view
-const lookAtOffset = new THREE.Vector3(0, 0.5, 0);     // Point slightly above tank base
-const mouseInfluenceFactor = 3.5;                     // Panning sensitivity
-const positionLerpFactor = 0.06;                      // Camera position smoothness (smaller = smoother)
-const lookAtLerpFactor = 0.08;                        // Camera lookAt smoothness
-
-// Helper vectors
+// Helper vectors (keep these)
 const tankPositionVec = new THREE.Vector3();
 const tankQuaternion = new THREE.Quaternion();
 const desiredBasePosition = new THREE.Vector3();
@@ -20,59 +22,49 @@ const viewDirection = new THREE.Vector3();
 const rightDirection = new THREE.Vector3();
 const upDirection = new THREE.Vector3();
 
+export function CameraRig({ tankRef }: { tankRef: React.RefObject<TankRef | null> }) {
+    const { camera, size } = useThree();
+    const mousePos = useRef({ x: 0, y: 0 });
+    const currentCameraPosition = useRef(new THREE.Vector3().copy(camera.position));
+    const currentLookAt = useRef(new THREE.Vector3());
 
-// Accepts the potentially null ref type
-export function CameraRig({ tankRef }: { tankRef: React.RefObject<THREE.Group | null> }) {
-  const { camera, size } = useThree();
-  const mousePos = useRef({ x: 0, y: 0 });
-  // Initialize refs with current camera state to avoid jump on first frame if possible
-  const currentCameraPosition = useRef(new THREE.Vector3().copy(camera.position));
-  const currentLookAt = useRef(new THREE.Vector3()); // Will be set based on tank pos
+    useEffect(() => {
+        const handleMouseMove = (event: MouseEvent) => {
+            mousePos.current.x = (event.clientX / size.width) * 2 - 1;
+            mousePos.current.y = -(event.clientY / size.height) * 2 + 1;
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, [size.width, size.height]);
 
+    useFrame(() => {
+        const visualGroup = tankRef.current?.group;
+        if (!visualGroup) return;
 
-  useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
-      mousePos.current.x = (event.clientX / size.width) * 2 - 1;
-      mousePos.current.y = -(event.clientY / size.height) * 2 + 1;
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [size.width, size.height]); // Dependencies only size
+        visualGroup.getWorldPosition(tankPositionVec);
+        visualGroup.getWorldQuaternion(tankQuaternion);
 
-  useFrame(() => {
-    if (!tankRef.current) return; // Don't update if tank doesn't exist yet
+        // Use constants for camera positioning
+        desiredBasePosition.copy(BASE_CAMERA_OFFSET).applyQuaternion(tankQuaternion).add(tankPositionVec);
 
-    // --- Get Tank State ---
-    tankRef.current.getWorldPosition(tankPositionVec);
-    tankRef.current.getWorldQuaternion(tankQuaternion);
+        camera.getWorldDirection(viewDirection);
+        rightDirection.crossVectors(camera.up, viewDirection).normalize();
+        upDirection.crossVectors(viewDirection, rightDirection).normalize();
 
-    // --- Calculate Target Camera Position ---
-    // 1. Base position relative to tank orientation
-    desiredBasePosition.copy(baseCameraOffset).applyQuaternion(tankQuaternion).add(tankPositionVec);
+        mouseOffsetVec.copy(rightDirection).multiplyScalar(mousePos.current.x * MOUSE_INFLUENCE_FACTOR)
+                      .addScaledVector(upDirection, mousePos.current.y * MOUSE_INFLUENCE_FACTOR * 0.5);
 
-    // 2. Panning offset based on mouse position
-    //    Calculate based on *current* camera orientation for screen-relative panning
-    camera.getWorldDirection(viewDirection);
-    rightDirection.crossVectors(camera.up, viewDirection).normalize();
-    upDirection.crossVectors(viewDirection, rightDirection).normalize(); // Use camera's local up
+        finalDesiredPosition.copy(desiredBasePosition).add(mouseOffsetVec);
 
-    mouseOffsetVec.copy(rightDirection).multiplyScalar(mousePos.current.x * mouseInfluenceFactor)
-                  .addScaledVector(upDirection, mousePos.current.y * mouseInfluenceFactor * 0.5); // Less Y influence
+        targetLookAtVec.copy(tankPositionVec).add(LOOK_AT_OFFSET); // Use constant
 
-    // 3. Final desired position = base + mouse pan offset
-    finalDesiredPosition.copy(desiredBasePosition).add(mouseOffsetVec);
+        // Use constants for interpolation factors
+        currentCameraPosition.current.lerp(finalDesiredPosition, POSITION_LERP_FACTOR);
+        currentLookAt.current.lerp(targetLookAtVec, LOOK_AT_LERP_FACTOR);
 
-    // --- Calculate Target LookAt --- (Relative to tank, not affected by panning)
-    targetLookAtVec.copy(tankPositionVec).add(lookAtOffset);
+        camera.position.copy(currentCameraPosition.current);
+        camera.lookAt(currentLookAt.current);
+    });
 
-    // --- Smooth Interpolation ---
-    currentCameraPosition.current.lerp(finalDesiredPosition, positionLerpFactor);
-    currentLookAt.current.lerp(targetLookAtVec, lookAtLerpFactor);
-
-    // --- Apply to Camera ---
-    camera.position.copy(currentCameraPosition.current);
-    camera.lookAt(currentLookAt.current);
-  });
-
-  return null; // Component manages camera, doesn't render anything itself
+    return null;
 }

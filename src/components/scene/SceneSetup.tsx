@@ -1,10 +1,12 @@
 import React from 'react';
-import { Grid, Environment, Plane } from '@react-three/drei';
+import { Grid, Environment } from '@react-three/drei';
+// Import Rapier components for the ground
+import { RigidBody, CuboidCollider } from '@react-three/rapier';
 
 export function SceneSetup() {
     return (
         <>
-            {/* Lighting */}
+            {/* Lighting & Environment (No Change) */}
             <ambientLight intensity={1} />
             <directionalLight
                 position={[15, 20, 10]}
@@ -18,10 +20,9 @@ export function SceneSetup() {
                 shadow-camera-top={15}
                 shadow-camera-bottom={-15}
             />
-             {/* Environment lighting */}
             <Environment preset="city" background={false} />
 
-            {/* Grid */}
+            {/* Grid (No Change) */}
             <Grid
                 infiniteGrid
                 cellSize={0.6}
@@ -35,10 +36,20 @@ export function SceneSetup() {
                 followCamera={false}
             />
 
-            {/* Invisible Ground Plane for Raycasting */}
-            <Plane args={[2000, 2000]} rotation={[-Math.PI / 2, 0, 0]} name="groundPlane" visible={false}>
+            {/* --- Physics Ground --- */}
+            <RigidBody type="fixed" colliders="cuboid" name="groundPlane">
+                {/* A large, thin cuboid acting as the ground collider */}
+                {/* Position it slightly below Y=0 to avoid Z-fighting with visual grid */}
+                <CuboidCollider args={[1000, 0.1, 1000]} position={[0, -0.1, 0]} />
+                {/* The visual Plane for raycasting can be removed or kept separate */}
+                {/* If removing, ensure raycasting targets this RigidBody or its collider */}
+            </RigidBody>
+
+             {/* Invisible Ground Plane for Raycasting (Optional, if raycasting doesn't work well on the physics body) */}
+             {/* Make sure its name is different if keeping both, e.g., "raycastPlane" */}
+             {/* <Plane args={[2000, 2000]} rotation={[-Math.PI / 2, 0, 0]} name="raycastPlane" visible={false}>
                 <meshStandardMaterial color="white" />
-            </Plane>
+             </Plane> */}
         </>
     );
 }

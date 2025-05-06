@@ -3,89 +3,88 @@ import { useRef, useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TankRef } from '../game/Tank';
-// Import constants (ensure path is correct)
+// Import constants
 import {
     BASE_CAMERA_OFFSET,
     LOOK_AT_OFFSET,
-    MOUSE_INFLUENCE_FACTOR,
+    MOUSE_PAN_FACTOR,       // Use the new panning factor constant
     POSITION_LERP_FACTOR,
     LOOK_AT_LERP_FACTOR
-} from '../../constants';
+} from '../../constants'; // Adjust path if needed
 
-// Helper vectors (no change needed)
+// Helper vectors
 const tankPositionVec = new THREE.Vector3();
-const tankQuaternion = new THREE.Quaternion(); // Still need this for applying BASE_CAMERA_OFFSET correctly if it's meant to be relative initially
 const desiredBasePosition = new THREE.Vector3();
-const mouseOffsetVec = new THREE.Vector3();
+const mouseOffsetVec = new THREE.Vector3(); // This will be the world-space pan offset
 const finalDesiredPosition = new THREE.Vector3();
-const targetLookAtVec = new THREE.Vector3();
-const viewDirection = new THREE.Vector3();
-const rightDirection = new THREE.Vector3();
-const upDirection = new THREE.Vector3();
+const baseLookAtVec = new THREE.Vector3();  // LookAt before panning
+const finalTargetLookAtVec = new THREE.Vector3(); // LookAt after panning
+const worldXAxis = new THREE.Vector3(1, 0, 0); // World X direction
+const worldZAxis = new THREE.Vector3(0, 0, 1); // World Z direction
 
 
 export function CameraRig({ tankRef }: { tankRef: React.RefObject<TankRef | null> }) {
     const { camera, size } = useThree();
-    const mousePos = useRef({ x: 0, y: 0 });
+    const mousePos = useRef({ x: 0, y: 0 }); // Normalized mouse coords (-1 to 1)
+    // Initialize refs with current camera state to potentially reduce initial jump
     const currentCameraPosition = useRef(new THREE.Vector3().copy(camera.position));
     const currentLookAt = useRef(new THREE.Vector3());
 
-    // Effect to track mouse position (normalized)
+
     useEffect(() => {
+        // Only track mouse movement
         const handleMouseMove = (event: MouseEvent) => {
-            mousePos.current.x = (event.clientX / size.width) * 2 - 1; // -1 (left) to +1 (right)
-            mousePos.current.y = -(event.clientY / size.height) * 2 + 1; // -1 (bottom) to +1 (top)
+            mousePos.current.x = (event.clientX / size.width) * 2 - 1;
+            mousePos.current.y = -(event.clientY / size.height) * 2 + 1;
         };
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [size.width, size.height]);
+    }, [size.width, size.height]); // Rerun only if canvas size changes
 
     useFrame(() => {
         const visualGroup = tankRef.current?.group;
-        if (!visualGroup) return; // Tank not ready yet
+        if (!visualGroup) return; // Tank not ready
 
-        // Get current world position of the tank's visual representation
+        // Get tank's current world position
         visualGroup.getWorldPosition(tankPositionVec);
 
-        // --- Calculate Camera's Target Position ---
+        // --- Calculate Target Camera Position ---
 
-        // 1. Determine the base position: Tank Position + Fixed Offset
-        //    This offset keeps the camera at a consistent distance and height
-        //    relative to the world, following the tank.
+        // 1. Base position is tank position plus the fixed world offset
         desiredBasePosition.copy(tankPositionVec).add(BASE_CAMERA_OFFSET);
 
-        // 2. Calculate the panning offset based on the mouse position
-        //    This offset shifts the camera view *parallel* to the screen plane.
-        camera.getWorldDirection(viewDirection); // Where the camera is currently looking
-        // Calculate the camera's local "right" vector in world space
-        rightDirection.crossVectors(camera.up, viewDirection).normalize();
-        // Calculate the camera's local "up" vector in world space (orthogonal to view and right)
-        upDirection.crossVectors(viewDirection, rightDirection).normalize();
+        // 2. Calculate the Panning Offset in WORLD SPACE (parallel to ground)
+        //    Reset the offset vector each frame
+        mouseOffsetVec.set(0, 0, 0);
+        // Add world X offset based on horizontal mouse position
+        mouseOffsetVec.addScaledVector(worldXAxis, mousePos.current.x * MOUSE_PAN_FACTOR);
+        // Add world Z offset based on vertical mouse position (Mouse Y up -> World Z negative/forward)
+        // Adjust Z direction if needed based on preference (e.g., worldZAxis or negative worldZAxis)
+        mouseOffsetVec.addScaledVector(worldZAxis, -mousePos.current.y * MOUSE_PAN_FACTOR * 0.5); // Less vertical pan influence
 
-        // Calculate the offset vector: Move along the camera's right/up based on mouse coords
-        mouseOffsetVec
-            .copy(rightDirection) // Start with camera's right direction
-            .multiplyScalar(mousePos.current.x * MOUSE_INFLUENCE_FACTOR) // Scale by horizontal mouse pos & factor
-            .addScaledVector(upDirection, mousePos.current.y * MOUSE_INFLUENCE_FACTOR * 0.5); // Add camera's up direction scaled by vertical mouse pos (less vertical influence)
 
-        // 3. Final target position = Base position + Mouse panning offset
+        // 3. Final camera position target = Base position + World panning offset
         finalDesiredPosition.copy(desiredBasePosition).add(mouseOffsetVec);
 
         // --- Calculate Camera's Look-At Target ---
-        // This target ONLY depends on the tank's position and a fixed vertical offset.
-        // It is NOT influenced by the mouse panning offset.
-        targetLookAtVec.copy(tankPositionVec).add(LOOK_AT_OFFSET);
+
+        // 1. Base look-at is tank position plus a fixed vertical offset
+        baseLookAtVec.copy(tankPositionVec).add(LOOK_AT_OFFSET);
+
+        // 2. Final look-at target = Base look-at + World panning offset
+        //    **Crucially, we apply the SAME pan offset to the look-at target.**
+        //    This keeps the viewing direction parallel during the pan.
+        finalTargetLookAtVec.copy(baseLookAtVec).add(mouseOffsetVec);
+
 
         // --- Smoothly Interpolate (Lerp) ---
-        // Move the camera's current position towards the final desired position
         currentCameraPosition.current.lerp(finalDesiredPosition, POSITION_LERP_FACTOR);
-        // Move the camera's current look-at point towards the target look-at point
-        currentLookAt.current.lerp(targetLookAtVec, LOOK_AT_LERP_FACTOR);
+        currentLookAt.current.lerp(finalTargetLookAtVec, LOOK_AT_LERP_FACTOR);
 
         // --- Apply to Camera ---
         camera.position.copy(currentCameraPosition.current);
-        camera.lookAt(currentLookAt.current); // Make the camera look at the interpolated target
+        camera.lookAt(currentLookAt.current);
     });
 
-    return null; // This component only controls the camera
+    return null; // Controls camera, renders nothing
 }

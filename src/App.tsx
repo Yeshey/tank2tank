@@ -1,39 +1,20 @@
-// src/App.tsx
-import { Suspense, useState, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
-import * as THREE from 'three';
-import { Physics } from '@react-three/rapier';
-import { Tank } from './components/game/Tank';
-import type { TankRef } from './components/game/Tank';
+import { Suspense, useState, lazy } from 'react';
+// Remove direct imports of Canvas, Physics, Tank, CameraRig, SceneSetup etc. if they are ONLY used in GameScene
 import { HomeScreen } from './components/HomeScreen';
-import { CameraRig } from './components/scene/CameraRig';
-import { SceneSetup } from './components/scene/SceneSetup';
-// Import camera constants
-import {
-    USE_ORTHOGRAPHIC_CAMERA,
-    ORTHO_CAMERA_ZOOM,
-    BASE_CAMERA_OFFSET, // Needed for initial ortho position
-    ORTHO_NEAR_CLIP,
-    ORTHO_FAR_CLIP
-} from './constants'; // Adjust path
 import './App.css';
 import './index.css';
+
+// Dynamically import the GameScene component
+const LazyGameScene = lazy(() => import('./components/GameScene'));
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [playerName, setPlayerName] = useState('');
-  const tankRef = useRef<TankRef>(null);
-  const groundPlaneRef = useRef<THREE.Mesh>(null);
+  // tankRef and groundPlaneRef are now inside GameScene
 
   const handleStartGame = (name: string) => {
     setPlayerName(name);
     setIsLoggedIn(true);
-  };
-
-  // Define perspective camera props (only used if NOT orthographic)
-  const perspectiveCameraProps = {
-    position: BASE_CAMERA_OFFSET.toArray() as [number, number, number], // Use constant for initial pos
-    fov: 55
   };
 
   return (
@@ -41,43 +22,10 @@ function App() {
       {!isLoggedIn ? (
         <HomeScreen onStart={handleStartGame} />
       ) : (
-        <Canvas
-          shadows
-          // Conditionally set camera props based on the constant
-          {...(USE_ORTHOGRAPHIC_CAMERA
-            ? { // Props for Orthographic mode
-                orthographic: true,
-                // Set initial ortho camera properties directly
-                camera: {
-                    position: BASE_CAMERA_OFFSET.toArray(), // Start at the offset
-                    zoom: ORTHO_CAMERA_ZOOM,
-                    near: ORTHO_NEAR_CLIP,
-                    far: ORTHO_FAR_CLIP,
-                 }
-              }
-            : { // Props for Perspective mode
-                camera: perspectiveCameraProps
-              }
-          )}
-          style={{ background: '#ffffff' }}
-          gl={{ antialias: true }}
-          dpr={[1, 2]}
-        >
-           {/* ===== Developer Note: Camera Mode Toggle ===== */}
-           {/* To switch between camera modes, edit the   */}
-           {/* USE_ORTHOGRAPHIC_CAMERA constant in       */}
-           {/* src/constants.ts and restart the server.  */}
-           {/* ============================================= */}
-
-           <Physics gravity={[0, -9.81, 0]}>
-            <Suspense fallback={null}>
-              {/* Pass tankRef to SceneSetup */}
-              <SceneSetup ref={groundPlaneRef} tankRef={tankRef} />
-              <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} groundPlaneRef={groundPlaneRef} />
-              <CameraRig tankRef={tankRef} />
-            </Suspense>
-          </Physics>
-        </Canvas>
+        // Use Suspense to show a loading indicator while the GameScene chunk is loaded
+        <Suspense fallback={<div style={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%'}}>Loading 3D Scene...</div>}>
+          <LazyGameScene playerName={playerName} />
+        </Suspense>
       )}
     </div>
   );

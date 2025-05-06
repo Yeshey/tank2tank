@@ -1,58 +1,54 @@
-import React, { forwardRef, useRef, useMemo } from 'react';
-// Remove useFrame if it's ONLY used for the grid now
+import { forwardRef, useRef, useMemo } from 'react';
+// No longer need useFrame here if it was only for the grid
+// No longer need TankRef type here
 // import { useFrame } from '@react-three/fiber';
+// import type { TankRef } from '../game/Tank';
 import { Environment, Plane } from '@react-three/drei';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
-import { InfiniteGridHelper } from '../../helper/InfiniteGridHelper'; // ADJUST PATH AS NEEDED
-import type { TankRef } from '../game/Tank';
+import { InfiniteGridHelper } from '../../helpers/InfiniteGridHelper'; // ADJUST PATH AS NEEDED
 
+// --- Remove tankRef from the interface ---
 interface SceneSetupProps {
-    tankRef: React.RefObject<TankRef | null>; // Keep tankRef if needed elsewhere, otherwise can remove
+    // tankRef: React.RefObject<TankRef | null>; // Remove this line
+    // Add any other props if needed later
 }
 
 export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>(
-    // Remove tankRef from props if no longer needed by this component
+    // Remove tankRef from the props destructuring
     // ({ tankRef }, ref) => {
-    ({}, ref) => { // Example: If tankRef is no longer needed here
-        // This is likely no longer needed if only used for grid positioning
+    ({}, ref) => { // Receive only the forwarded ref
+
+        // tankWorldPos is no longer needed if grid isn't moved manually
         // const tankWorldPos = useMemo(() => new THREE.Vector3(), []);
 
         const gridHelper = useMemo(() => {
+            // ... Grid helper creation ...
             const helper = new InfiniteGridHelper(
                 10, 100, 0xcccccc, 80
             );
             const material = helper.material as THREE.ShaderMaterial;
             material.transparent = true;
             material.depthWrite = false;
-
-            // Set the initial position (e.g., slightly below origin)
-            // This position will NOT be updated per frame anymore
             helper.position.y = -0.01;
             return helper;
         }, []);
 
-        // Keep the ref if you want to access the helper for other reasons (e.g., debugging)
-        // otherwise, it can be removed if the object isn't interacted with after creation.
+        // Ref for the grid helper primitive (optional, only needed if accessed)
         const gridPrimitiveRef = useRef<InfiniteGridHelper>(null!);
 
-        // --- REMOVE THE useFrame LOGIC THAT MOVES THE GRID ---
+        // --- Ensure the useFrame that moved the grid IS REMOVED ---
         /*
          useFrame(() => {
-             const tankGroup = tankRef.current?.group;
-             const gridPrimitive = gridPrimitiveRef.current;
-
-             if (tankGroup && gridPrimitive) {
-                 tankGroup.getWorldPosition(tankWorldPos);
-                 // DON'T DO THIS: gridPrimitive.position.set(...)
-             }
+            // THIS BLOCK SHOULD BE GONE
          });
         */
-         // -------------------------------------------------------
+         // ---------------------------------------------------------
 
-         return (
+        return (
             <>
-              <ambientLight intensity={1} />
+                {/* ... Lights, Environment ... */}
+                 <ambientLight intensity={1} />
                  <directionalLight
                     position={[15, 20, 10]}
                     intensity={2.5}
@@ -68,23 +64,23 @@ export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>(
                 />
                 <Environment preset="city" background={false} />
 
-                 {/* The helper object itself stays stationary */}
-                 <primitive
+                {/* Primitive for the grid helper */}
+                <primitive
                     object={gridHelper}
-                    ref={gridPrimitiveRef} // Ref is optional if not used elsewhere
+                    ref={gridPrimitiveRef} // Assign ref if needed elsewhere
                 />
 
-                 {/* Physics Ground remains essential */}
+                {/* ... Physics Ground ... */}
                  <RigidBody type="fixed" colliders="cuboid" name="physicsGround">
                     <CuboidCollider args={[1000, 0.1, 1000]} position={[0, -0.1, 0]} />
                 </RigidBody>
 
-                 {/* Raycasting Plane remains essential and MUST be stationary */}
-                 <Plane
-                    ref={ref} // Forwarded ref for raycasting target
+                {/* Invisible Plane for Raycasting */}
+                <Plane
+                    ref={ref} // Assign the forwarded ref for raycasting
                     args={[2000, 2000]}
                     rotation={[-Math.PI / 2, 0, 0]}
-                    position={[0, -0.05, 0]} // Ensure Y is distinct
+                    position={[0, -0.05, 0]}
                     name="raycastPlane"
                     visible={false}
                 >

@@ -1,12 +1,12 @@
-import { Suspense, useRef } from 'react';
-import { Stats } from '@react-three/drei'; // Import Stats
+import { Suspense, useRef, useEffect /* Added useEffect */ } from 'react'; // Make sure useEffect is imported
+import { Stats } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Physics } from '@react-three/rapier';
 import { Tank } from './game/Tank';
 import type { TankRef } from './game/Tank';
 import { CameraRig } from './scene/CameraRig';
-import { SceneSetup } from './scene/SceneSetup'; // Import the modified SceneSetup
+import { SceneSetup } from './scene/SceneSetup';
 import {
     USE_ORTHOGRAPHIC_CAMERA,
     ORTHO_CAMERA_ZOOM,
@@ -21,8 +21,19 @@ interface GameSceneProps {
 }
 
 export function GameScene({ playerName }: GameSceneProps) {
+    // --- DEBUG LOGGING START ---
+    console.log('GameScene RENDERED/MOUNTED'); // Log on every render/initial mount
+
+    useEffect(() => {
+        console.log('GameScene EFFECT MOUNT'); // Log only when component mounts
+        return () => {
+            // This runs when the component unmounts
+            console.error('!!! GameScene UNMOUNTING !!!'); // Log with error level to make it stand out
+        };
+    }, []); // Empty dependency array ensures this runs only once on mount and cleanup runs on unmount
+    // --- DEBUG LOGGING END ---
+
     const tankRef = useRef<TankRef>(null);
-    // This ref is for the raycasting plane, needs to be passed to SceneSetup
     const groundPlaneRef = useRef<THREE.Mesh>(null);
 
     // Camera props logic
@@ -47,12 +58,12 @@ export function GameScene({ playerName }: GameSceneProps) {
             style={{ background: '#ffffff' }}
             gl={{ antialias: true }}
             dpr={[1, 2]}
+            // Consider adding this prop if context loss persists, helps recovery sometimes
+            // gl={{ antialias: true, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false }}
         >
             {SHOW_FPS_STATS && <Stats />}
             <Physics gravity={[0, -9.81, 0]}>
                 <Suspense fallback={null}>
-                    {/* Pass the groundPlaneRef (for raycasting) */}
-                    {/* Do NOT pass tankRef, as it's not needed by SceneSetup anymore */}
                     <SceneSetup ref={groundPlaneRef} />
                     <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} groundPlaneRef={groundPlaneRef} />
                     <CameraRig tankRef={tankRef} />

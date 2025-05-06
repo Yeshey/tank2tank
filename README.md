@@ -6,6 +6,8 @@ Access the site here: https://yeshey.github.io/tank2tank/
 
 # React + TypeScript + Vite
 
+Project created with `npm create vite@latest tank2tank --template react-ts`
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

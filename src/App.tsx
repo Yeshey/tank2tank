@@ -69,12 +69,11 @@ function App() {
            {/* src/constants.ts and restart the server.  */}
            {/* ============================================= */}
 
-          <Physics gravity={[0, -9.81, 0]}>
+           <Physics gravity={[0, -9.81, 0]}>
             <Suspense fallback={null}>
-              <SceneSetup ref={groundPlaneRef} />
+              {/* Pass tankRef to SceneSetup */}
+              <SceneSetup ref={groundPlaneRef} tankRef={tankRef} />
               <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} groundPlaneRef={groundPlaneRef} />
-              {/* CameraRig works with both Perspective and Orthographic cameras */}
-              {/* It reads the camera instance from useThree() */}
               <CameraRig tankRef={tankRef} />
             </Suspense>
           </Physics>

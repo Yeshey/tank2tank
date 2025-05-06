@@ -57,6 +57,5 @@ body, html {
 
 canvas {
   display: block; /* Prevent minor spacing issues */
-  width: 100% !important;
-  height: 100% !important;
+
 }

@@ -33,15 +33,15 @@ export const TURRET_ROTATE_SPEED = Math.PI * 0.5; // 90 degrees per second
 
 // --- Camera Positioning ---
 // How high above the tank's base position the camera should be.
-export const CAMERA_Y_OFFSET = 18; // <-- Increased height significantly
+export const CAMERA_Y_OFFSET = 17; // <-- Increased height significantly
 // How far back (along the Z-axis) the camera should be from the tank.
 // A smaller value brings it closer to directly overhead.
-export const CAMERA_Z_OFFSET = 11; // <-- Reduced distance back
+export const CAMERA_Z_OFFSET = 9; // <-- Reduced distance back
 // Base offset vector calculated from the above constants. Used for initial positioning.
 export const BASE_CAMERA_OFFSET = new THREE.Vector3(0, CAMERA_Y_OFFSET, CAMERA_Z_OFFSET);
 // An offset FROM the tank's base position where the camera should *look*.
 // Lowering this slightly since the camera is higher.
-export const LOOK_AT_OFFSET = new THREE.Vector3(0, 0.2, 0);
+export const LOOK_AT_OFFSET = new THREE.Vector3(0, BODY_HEIGHT / 2, 0);
 
 // --- Mouse Panning ---
 // How much the mouse position (from center screen) influences the camera's PANNING offset.

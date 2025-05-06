@@ -1,10 +1,9 @@
 import React, { Suspense, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
-// Import Physics
 import { Physics } from '@react-three/rapier';
 import { Tank } from './components/game/Tank';
-import type { TankRef } from './components/game/Tank'; // Import TankRef type
+import type { TankRef } from './components/game/Tank';
 import { HomeScreen } from './components/HomeScreen';
 import { CameraRig } from './components/scene/CameraRig';
 import { SceneSetup } from './components/scene/SceneSetup';
@@ -14,8 +13,9 @@ import './index.css';
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [playerName, setPlayerName] = useState('');
-  // Ref now holds the TankRef type (or null)
   const tankRef = useRef<TankRef>(null);
+  // Create the ref for the raycasting plane here
+  const groundPlaneRef = useRef<THREE.Mesh>(null);
 
   const handleStartGame = (name: string) => {
     setPlayerName(name);
@@ -39,17 +39,14 @@ function App() {
           gl={{ antialias: true }}
           dpr={[1, 2]}
         >
-          {/* Wrap dynamic scene elements in Physics */}
-          <Physics gravity={[0, -9.81, 0]}> {/* Add gravity */}
+          <Physics gravity={[0, -9.81, 0]}>
             <Suspense fallback={null}>
-              {/* Setup Scene Elements (Ground is now physics-based) */}
-              <SceneSetup />
+              {/* Pass the ref to SceneSetup */}
+              <SceneSetup ref={groundPlaneRef} />
 
-              {/* Game Objects */}
-              <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} /> {/* Start slightly above ground */}
+              {/* Pass the ref to Tank */}
+              <Tank ref={tankRef} name={playerName} position={[0, 0.5, 0]} groundPlaneRef={groundPlaneRef} />
 
-              {/* Camera Controller */}
-              {/* Pass the TankRef */}
               <CameraRig tankRef={tankRef} />
             </Suspense>
           </Physics>

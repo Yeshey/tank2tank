@@ -17,12 +17,14 @@ const epsilon = 1e-5; // Keep epsilon
 export function useTurretAiming(
     turretRef: React.RefObject<THREE.Group | null>,
     tankVisualRef: React.RefObject<THREE.Group | null>,
-    groundPlaneRef: React.RefObject<THREE.Mesh | null>
+    groundPlaneRef: React.RefObject<THREE.Mesh | null> // Needs to be the raycast plane mesh
 ) {
     const { camera, raycaster, pointer } = useThree();
 
     const updateAiming = useCallback((delta: number) => {
-        if (!turretRef.current || !tankVisualRef.current || !groundPlaneRef.current) return;
+        if (!turretRef.current || !tankVisualRef.current || !groundPlaneRef.current) {
+            return; // Exit if refs aren't ready
+        }
 
         raycaster.setFromCamera(pointer, camera);
         const intersects = raycaster.intersectObject(groundPlaneRef.current);
@@ -34,13 +36,16 @@ export function useTurretAiming(
 
             const dx = targetPoint.x - turretWorldPos.x;
             const dz = targetPoint.z - turretWorldPos.z;
-            const targetWorldAngleY = Math.atan2(dx, dz); // Correct angle
+
+            // --- Correction: Add Math.PI for 180-degree offset ---
+            // This assumes the barrel points down local -Z when turret rotation is 0
+            const targetWorldAngleY = Math.atan2(dx, dz) + Math.PI;
 
             targetWorldQuat.setFromAxisAngle(yAxis, targetWorldAngleY);
             parentInverseQuat.copy(tankWorldQuat).invert();
             targetLocalQuat.copy(parentInverseQuat).multiply(targetWorldQuat);
 
-            const step = TURRET_ROTATE_SPEED * delta; // Use constant
+            const step = TURRET_ROTATE_SPEED * delta;
             const currentQuat = turretRef.current.quaternion;
             const angleDiff = currentQuat.angleTo(targetLocalQuat);
 
@@ -49,7 +54,7 @@ export function useTurretAiming(
                 currentQuat.rotateTowards(targetLocalQuat, rotateStep);
             }
         }
-    }, [turretRef, tankVisualRef, groundPlaneRef, camera, raycaster, pointer]);
+    }, [turretRef, tankVisualRef, groundPlaneRef, camera, raycaster, pointer]); // Dependencies
 
     return { updateAiming };
 }

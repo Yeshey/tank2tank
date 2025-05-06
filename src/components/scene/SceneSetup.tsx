@@ -1,9 +1,15 @@
-import React from 'react';
-import { Grid, Environment } from '@react-three/drei';
-// Import Rapier components for the ground
+import React, { forwardRef } from 'react'; // Import forwardRef
+import { Grid, Environment, Plane } from '@react-three/drei';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
+import * as THREE from 'three'; // Needed for THREE.Mesh type
 
-export function SceneSetup() {
+// Define props including the forwarded ref
+interface SceneSetupProps {
+    // Add any other props if needed later
+}
+
+// Use forwardRef to accept the ref from App.tsx
+export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>((props, ref) => {
     return (
         <>
             {/* Lighting & Environment (No Change) */}
@@ -36,20 +42,17 @@ export function SceneSetup() {
                 followCamera={false}
             />
 
-            {/* --- Physics Ground --- */}
-            <RigidBody type="fixed" colliders="cuboid" name="groundPlane">
-                {/* A large, thin cuboid acting as the ground collider */}
-                {/* Position it slightly below Y=0 to avoid Z-fighting with visual grid */}
+            {/* Physics Ground (No Change) */}
+            <RigidBody type="fixed" colliders="cuboid" name="physicsGround"> {/* Maybe rename? */}
                 <CuboidCollider args={[1000, 0.1, 1000]} position={[0, -0.1, 0]} />
-                {/* The visual Plane for raycasting can be removed or kept separate */}
-                {/* If removing, ensure raycasting targets this RigidBody or its collider */}
             </RigidBody>
 
-             {/* Invisible Ground Plane for Raycasting (Optional, if raycasting doesn't work well on the physics body) */}
-             {/* Make sure its name is different if keeping both, e.g., "raycastPlane" */}
-             {/* <Plane args={[2000, 2000]} rotation={[-Math.PI / 2, 0, 0]} name="raycastPlane" visible={false}>
-                <meshStandardMaterial color="white" />
-             </Plane> */}
+             {/* Invisible Plane for Raycasting - Forward the ref here */}
+             <Plane ref={ref} args={[2000, 2000]} rotation={[-Math.PI / 2, 0, 0]} name="raycastPlane" visible={false}>
+                <meshStandardMaterial color="white" side={THREE.DoubleSide}/> {/* Ensure material exists */}
+             </Plane>
         </>
     );
-}
+});
+
+SceneSetup.displayName = 'SceneSetup'; // Add display name

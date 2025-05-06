@@ -20,7 +20,7 @@ export const BRAKE_TORQUE_MULTIPLIER = 0.85;
 export const MAX_ANGULAR_VELOCITY = 2.0;
 
 // Turret Aiming
-export const TURRET_ROTATE_SPEED = Math.PI * 1.2;
+export const TURRET_ROTATE_SPEED = Math.PI * 0.5;
 
 // Camera Settings
 export const BASE_CAMERA_OFFSET = new THREE.Vector3(0, 12, 14); // Now THREE is defined

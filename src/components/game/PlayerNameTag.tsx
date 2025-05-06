@@ -1,4 +1,3 @@
-import React from 'react';
 import { Text } from '@react-three/drei';
 // Import constant for positioning
 import { NAME_TAG_Y_OFFSET } from '../../constants'; // Adjust path if needed

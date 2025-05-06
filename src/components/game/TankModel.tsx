@@ -12,7 +12,7 @@ import {
     TURRET_GROUP_Y_OFFSET,
     TURRET_GROUP_Z_OFFSET,
     BARREL_Z_OFFSET,
-    COLLIDER_Y_OFFSET // Though collider is separate, keep height constant reference consistent
+    // COLLIDER_Y_OFFSET // Though collider is separate, keep height constant reference consistent
 } from '../../constants'; // Adjust path if needed
 
 interface TankModelProps extends React.ComponentPropsWithoutRef<'group'> {

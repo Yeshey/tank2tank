@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { Suspense, useState, useRef } from 'react';
+import { Suspense, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Physics } from '@react-three/rapier';

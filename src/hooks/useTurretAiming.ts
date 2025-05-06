@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 // Import constant

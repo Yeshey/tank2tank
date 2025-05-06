@@ -22,7 +22,7 @@ export interface TankRef {
 }
 
 export const Tank = forwardRef<TankRef, TankProps>(
-    ({ name = 'Tank', position = [0, 0.5, 0], groundPlaneRef, ...props }, ref) => { // Destructure groundPlaneRef
+    ({ name = 'Tank', position = [0, 0.5, 0], groundPlaneRef }, ref) => { // Destructure groundPlaneRef
 
         const rigidBodyRef = useRef<RapierRigidBody>(null);
         const visualGroupRef = useRef<THREE.Group>(null);
@@ -38,10 +38,10 @@ export const Tank = forwardRef<TankRef, TankProps>(
             group: visualGroupRef.current
         }));
 
-        useFrame((state, delta) => {
-            if (!rigidBodyRef.current) return;
-            updateMovement(delta);
-            updateAiming(delta);
+        useFrame((_state, delta) => { // <-- Use underscore prefix
+          if (!rigidBodyRef.current) return;
+          updateMovement(delta);
+          updateAiming(delta);
         });
 
         return (

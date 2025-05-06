@@ -1,5 +1,4 @@
 import { Suspense, useRef } from 'react';
-import { Stats } from '@react-three/drei'; // Import Stats
 import { Canvas } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Physics } from '@react-three/rapier';
@@ -47,7 +46,6 @@ export function GameScene({ playerName }: GameSceneProps) {
             gl={{ antialias: true }}
             dpr={[1, 2]}
         >
-            <Stats /> {/* Add Stats component */}
             <Physics gravity={[0, -9.81, 0]}>
                 <Suspense fallback={null}>
                     {/* Pass the groundPlaneRef (for raycasting) */}

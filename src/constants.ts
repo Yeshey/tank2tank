@@ -16,8 +16,8 @@ export const BARREL_LENGTH = 1.5;
 // Tank Movement Physics (Rapier Configuration) - No changes needed here
 // =====================================================================
 export const MOVE_FORCE = 180;
-export const BRAKE_FORCE_MULTIPLIER = 0.8;
-export const MAX_LINEAR_VELOCITY = 5;
+export const BRAKE_FORCE_MULTIPLIER = 0.5;
+export const MAX_LINEAR_VELOCITY = 11;
 export const TURN_TORQUE = 150;
 export const BRAKE_TORQUE_MULTIPLIER = 0.85;
 export const MAX_ANGULAR_VELOCITY = 2.0;

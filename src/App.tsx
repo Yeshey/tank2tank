@@ -1,55 +1,55 @@
-import { Suspense } from 'react';
+import React, { Suspense, useState, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment } from '@react-three/drei';
-import { Tank } from './components/Tank'; // Adjust path if needed
-import './App.css'; // Keep or modify existing styles
+import * as THREE from 'three'; // Import THREE
+import { Tank } from './components/game/Tank'; // Updated path
+import { HomeScreen } from './components/HomeScreen';
+import { CameraRig } from './components/scene/CameraRig'; // Updated path
+import { SceneSetup } from './components/scene/SceneSetup'; // Updated path
+import './App.css';
+import './index.css';
 
 function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const tankRef = useRef<THREE.Group>(null);
+
+  const handleStartGame = (name: string) => {
+    setPlayerName(name);
+    setIsLoggedIn(true);
+  };
+
+  // Correctly type or construct the camera props
+  const initialCameraProps = {
+    // position: new THREE.Vector3(0, 12, 14), // Option 1: Use Vector3
+    position: [0, 12, 14] as [number, number, number], // Option 2: Type Assertion
+    fov: 55
+  };
+
   return (
-    <>
-      {/* Optional: Add traditional HTML UI elements here if needed */}
-      {/* <h1 style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1 }}>Tank2Tank</h1> */}
+    <div style={{ width: '100vw', height: '100vh', margin: 0, padding: 0, overflow: 'hidden' }}> {/* Ensure container fills screen */}
+      {!isLoggedIn ? (
+        <HomeScreen onStart={handleStartGame} />
+      ) : (
+        <Canvas
+          shadows
+          camera={initialCameraProps} // Use the typed props
+          style={{ background: '#ffffff' }}
+          gl={{ antialias: true }}
+          dpr={[1, 2]}
+        >
+          <Suspense fallback={null}>
+            {/* Setup Scene Elements */}
+            <SceneSetup />
 
-      <Canvas
-        shadows // Enable shadows
-        camera={{ position: [5, 5, 10], fov: 50 }} // Set camera position and field of view
-        style={{ background: '#ffffff' }} // White background
-      >
-        {/* Lighting */}
-        <ambientLight intensity={0.8} />
-        <directionalLight
-          position={[10, 10, 5]}
-          intensity={1.5}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        {/* Use Environment for nice ambient lighting and reflections (optional but looks good) */}
-        <Environment preset="sunset" background={false}/>
+            {/* Game Objects */}
+            <Tank ref={tankRef} name={playerName} position={[0, 0, 0]} />
 
-
-        {/* Grid */}
-        <Grid
-          infiniteGrid // Make the grid infinite
-          cellSize={0.5} // Size of each grid cell
-          cellThickness={0.5} // Thickness of the grid lines
-          cellColor="#cccccc" // Light grey color for the cells
-          sectionSize={2} // Size of the major grid sections
-          sectionThickness={1} // Thickness of the major grid lines
-          sectionColor="#aaaaaa" // Darker grey color for the sections
-          fadeDistance={50} // Distance at which the grid starts to fade
-          fadeStrength={1} // How quickly the grid fades
-        />
-
-        {/* Tank - Use Suspense for potential async loading later */}
-        <Suspense fallback={null}>
-          <Tank position={[0, 0, 0]} />
-        </Suspense>
-
-        {/* Controls - Allows mouse dragging to orbit the camera */}
-        <OrbitControls makeDefault />
-      </Canvas>
-    </>
+            {/* Camera Controller */}
+            <CameraRig tankRef={tankRef} />
+          </Suspense>
+        </Canvas>
+      )}
+    </div>
   );
 }
 

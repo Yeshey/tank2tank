@@ -1,11 +1,26 @@
 /* Reset the max-width that was limiting the canvas size */
 #root {
+  /* These might be redundant if set in index.css, but harmless */
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
-  text-align: center;
-  overflow: hidden;
+  /* text-align: center; /* Probably not needed */
+  /* overflow: hidden; /* Redundant if set in index.css */
+}
+
+/* These are likely redundant if set in index.css */
+/* body, html { */
+/*   width: 100%; */
+/*   height: 100%; */
+/*   margin: 0; */
+/*   padding: 0; */
+/*   overflow: hidden; */
+/* } */
+
+canvas {
+  display: block;
+  /* NO width/height overrides here */
 }
 
 .logo {
@@ -44,18 +59,4 @@
 
 .read-the-docs {
   color: #888;
-}
-
-/* Ensure canvas fills the viewport */
-body, html {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden; /* Prevent scrollbars */
-}
-
-canvas {
-  display: block; /* Prevent minor spacing issues */
-
 }

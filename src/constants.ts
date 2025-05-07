@@ -60,18 +60,37 @@ export const TURRET_ROTATE_SPEED = Math.PI * 0.5;
 // Camera Settings - No changes needed unless physics changes warrant them
 // =====================================================================
 // ... (keep existing camera constants) ...
-export const CAMERA_Y_OFFSET = 18;
-export const CAMERA_Z_OFFSET = 11;
+// src/constants.ts
+
+// =====================================================================
+// Camera Settings
+// =====================================================================
+export const CAMERA_Y_OFFSET = 25; // Your new value
+export const CAMERA_Z_OFFSET = 7;  // Your new value
 export const BASE_CAMERA_OFFSET = new THREE.Vector3(0, CAMERA_Y_OFFSET, CAMERA_Z_OFFSET);
-export const LOOK_AT_OFFSET = new THREE.Vector3(0, 0.2, 0);
-export const MOUSE_PAN_FACTOR = 8.0;
-export const POSITION_LERP_FACTOR = 0.05;
-export const LOOK_AT_LERP_FACTOR = 0.07;
+export const LOOK_AT_OFFSET = new THREE.Vector3(0, 0.2, 0); // Vertical offset for look-at target from tank base
+
+export const MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN = 8.0; // Below this CZO, Z-pan will be scaled down.
+export const Z_PAN_SCALING_AT_MIN_CZO = 0.5;     // At CZO=0 (or very small), Z-pan is scaled by this (e.g., 50%)
+
+// export const MOUSE_PAN_FACTOR = 8.0; // We'll replace this simple factor
+export const MAX_WORLD_PAN_DISTANCE = 7.0; // NEW: Max distance (world units) mouse pan can shift the view center.
+
+export const POSITION_LERP_FACTOR = 0.05; // Smoothing for camera position
+export const LOOK_AT_LERP_FACTOR = 0.07;  // Smoothing for look-at target
+
 export const USE_ORTHOGRAPHIC_CAMERA = false;
 export const ORTHO_CAMERA_ZOOM = 50;
 export const ORTHO_NEAR_CLIP = 0.1;
 export const ORTHO_FAR_CLIP = 1000;
 
+// ... (rest of constants)
+
+// NEW PANNING CONSTANTS
+export const MAX_PAN_DISTANCE_HORIZONTAL = 12.0;      // Max world units to pan left/right
+export const MAX_PAN_DISTANCE_VERTICAL_FORWARD = 18.0; // Max world units to pan "forward" (mouse down)
+export const MAX_PAN_DISTANCE_VERTICAL_BACKWARD = 6.0; // Max world units to pan "backward" (mouse up)
+export const REFERENCE_ASPECT_RATIO = 16 / 9;        // e.g., 1920x1080
 
 // =====================================================================
 // Visual Offsets (Relative Positioning)

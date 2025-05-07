@@ -1,90 +1,130 @@
 // src/components/scene/CameraRig.tsx
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { TankRef } from '../game/Tank';
-// Import constants
 import {
     BASE_CAMERA_OFFSET,
     LOOK_AT_OFFSET,
-    MOUSE_PAN_FACTOR,       // Use the new panning factor constant
+    MAX_WORLD_PAN_DISTANCE, // This becomes the pan distance for the SHORTER screen dimension edge
     POSITION_LERP_FACTOR,
-    LOOK_AT_LERP_FACTOR
-} from '../../constants'; // Adjust path if needed
+    LOOK_AT_LERP_FACTOR,
+    MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN,
+    Z_PAN_SCALING_AT_MIN_CZO,
+} from '../../constants';
 
-// Helper vectors
 const tankPositionVec = new THREE.Vector3();
-const desiredBasePosition = new THREE.Vector3();
-const mouseOffsetVec = new THREE.Vector3(); // This will be the world-space pan offset
-const finalDesiredPosition = new THREE.Vector3();
-const baseLookAtVec = new THREE.Vector3();  // LookAt before panning
-const finalTargetLookAtVec = new THREE.Vector3(); // LookAt after panning
-const worldXAxis = new THREE.Vector3(1, 0, 0); // World X direction
-const worldZAxis = new THREE.Vector3(0, 0, 1); // World Z direction
-
+const desiredBaseCameraPosition = new THREE.Vector3();
+const worldPanOffset = new THREE.Vector3();
+const finalDesiredCameraPosition = new THREE.Vector3();
+const desiredPanLookAtTargetOnPlane = new THREE.Vector3();
+const worldXAxis = new THREE.Vector3(1, 0, 0); // Not directly used in this version's pan calc but good to have
+const worldZAxis = new THREE.Vector3(0, 0, 1); // Not directly used
 
 export function CameraRig({ tankRef }: { tankRef: React.RefObject<TankRef | null> }) {
     const { camera, size } = useThree();
-    const mousePos = useRef({ x: 0, y: 0 }); // Normalized mouse coords (-1 to 1)
-    // Initialize refs with current camera state to potentially reduce initial jump
-    const currentCameraPosition = useRef(new THREE.Vector3().copy(camera.position));
+    const mousePosNormalized = useRef({ x: 0, y: 0 });
+    const currentCameraPosition = useRef(new THREE.Vector3());
     const currentLookAt = useRef(new THREE.Vector3());
-
+    const [isInitialized, setIsInitialized] = useState(false);
 
     useEffect(() => {
-        // Only track mouse movement
+        if (tankRef.current?.group && !isInitialized) {
+            const tempTankPos = new THREE.Vector3();
+            tankRef.current.group.getWorldPosition(tempTankPos);
+            const initialCameraPos = tempTankPos.clone().add(BASE_CAMERA_OFFSET);
+            camera.position.copy(initialCameraPos);
+            currentCameraPosition.current.copy(initialCameraPos);
+            const initialLookTarget = tempTankPos.clone().add(LOOK_AT_OFFSET);
+            camera.lookAt(initialLookTarget);
+            currentLookAt.current.copy(initialLookTarget);
+            setIsInitialized(true);
+        }
         const handleMouseMove = (event: MouseEvent) => {
-            mousePos.current.x = (event.clientX / size.width) * 2 - 1;
-            mousePos.current.y = -(event.clientY / size.height) * 2 + 1;
+            mousePosNormalized.current.x = (event.clientX / size.width) * 2 - 1;
+            mousePosNormalized.current.y = -(event.clientY / size.height) * 2 + 1;
         };
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
-    }, [size.width, size.height]); // Rerun only if canvas size changes
+    }, [size.width, size.height, tankRef, isInitialized, camera]);
 
     useFrame(() => {
-        const visualGroup = tankRef.current?.group;
-        if (!visualGroup) return; // Tank not ready
+        if (!isInitialized || !tankRef.current?.group) return;
 
-        // Get tank's current world position
+        const visualGroup = tankRef.current.group;
         visualGroup.getWorldPosition(tankPositionVec);
 
-        // --- Calculate Target Camera Position ---
+        desiredBaseCameraPosition.copy(tankPositionVec).add(BASE_CAMERA_OFFSET);
 
-        // 1. Base position is tank position plus the fixed world offset
-        desiredBasePosition.copy(tankPositionVec).add(BASE_CAMERA_OFFSET);
+        const normalizedMouseX = mousePosNormalized.current.x;
+        const normalizedMouseY = mousePosNormalized.current.y;
+        const screenAspectRatio = size.width / size.height; // e.g., 1920/1080 = 1.77 (landscape)
 
-        // 2. Calculate the Panning Offset in WORLD SPACE (parallel to ground)
-        //    Reset the offset vector each frame
-        mouseOffsetVec.set(0, 0, 0);
-        // Add world X offset based on horizontal mouse position
-        mouseOffsetVec.addScaledVector(worldXAxis, mousePos.current.x * MOUSE_PAN_FACTOR);
-        // Add world Z offset based on vertical mouse position (Mouse Y up -> World Z negative/forward)
-        // Adjust Z direction if needed based on preference (e.g., worldZAxis or negative worldZAxis)
-        mouseOffsetVec.addScaledVector(worldZAxis, -mousePos.current.y * MOUSE_PAN_FACTOR * 0.5); // Less vertical pan influence
+        let panXMultiplier = MAX_WORLD_PAN_DISTANCE;
+        let panZMultiplier = MAX_WORLD_PAN_DISTANCE;
 
+        if (screenAspectRatio > 1) { // Landscape: Width is W, Height is H (W > H)
+            // Screen is wider than it is tall.
+            // Vertical mouse movement (Y-mouse -> Z-world pan) should have more reach.
+            panZMultiplier = MAX_WORLD_PAN_DISTANCE * screenAspectRatio; // Multiply by W/H
+            // Horizontal mouse movement (X-mouse -> X-world pan) uses the base.
+            // panXMultiplier remains MAX_WORLD_PAN_DISTANCE;
+        } else if (screenAspectRatio < 1) { // Portrait: Width is W, Height is H (H > W)
+            // Screen is taller than it is wide.
+            // Horizontal mouse movement (X-mouse -> X-world pan) should have more reach.
+            panXMultiplier = MAX_WORLD_PAN_DISTANCE / screenAspectRatio; // Multiply by H/W (which is 1/aspectRatio)
+            // Vertical mouse movement (Y-mouse -> Z-world pan) uses the base.
+            // panZMultiplier remains MAX_WORLD_PAN_DISTANCE;
+        }
+        // If square (screenAspectRatio == 1), both multipliers remain MAX_WORLD_PAN_DISTANCE.
 
-        // 3. Final camera position target = Base position + World panning offset
-        finalDesiredPosition.copy(desiredBasePosition).add(mouseOffsetVec);
+        const panAmountX = normalizedMouseX * panXMultiplier;
+        let panAmountZ = -normalizedMouseY * panZMultiplier; // Base Z pan from mouse Y
 
-        // --- Calculate Camera's Look-At Target ---
+        // Adaptive Z-Pan based on CAMERA_Z_OFFSET
+        const actualCameraZOffset = BASE_CAMERA_OFFSET.z;
+        let zPanScale = 1.0;
+        if (actualCameraZOffset < MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN) {
+            if (MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN <= 0) { // Avoid division by zero
+                zPanScale = Z_PAN_SCALING_AT_MIN_CZO;
+            } else {
+                const t = Math.max(0, actualCameraZOffset) / MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN;
+                zPanScale = Z_PAN_SCALING_AT_MIN_CZO + t * (1.0 - Z_PAN_SCALING_AT_MIN_CZO);
+            }
+        }
+        // Apply CZO scaling *only* to the Z component of the pan
+        panAmountZ *= zPanScale;
 
-        // 1. Base look-at is tank position plus a fixed vertical offset
-        baseLookAtVec.copy(tankPositionVec).add(LOOK_AT_OFFSET);
+        worldPanOffset.set(panAmountX, 0, panAmountZ);
 
-        // 2. Final look-at target = Base look-at + World panning offset
-        //    **Crucially, we apply the SAME pan offset to the look-at target.**
-        //    This keeps the viewing direction parallel during the pan.
-        finalTargetLookAtVec.copy(baseLookAtVec).add(mouseOffsetVec);
+        // NO OVERALL MAGNITUDE CLAMP here for elliptical reach.
+        // MAX_WORLD_PAN_DISTANCE is the pan extent when mouse reaches edge of SHORTER screen dimension.
 
+        finalDesiredCameraPosition.copy(desiredBaseCameraPosition).add(worldPanOffset);
 
-        // --- Smoothly Interpolate (Lerp) ---
-        currentCameraPosition.current.lerp(finalDesiredPosition, POSITION_LERP_FACTOR);
-        currentLookAt.current.lerp(finalTargetLookAtVec, LOOK_AT_LERP_FACTOR);
+        // Adaptive Look-At Y
+        let lookAtTargetY = tankPositionVec.y + LOOK_AT_OFFSET.y;
+        if (normalizedMouseY < 0) { // Mouse in bottom half
+            const yAdjustFactor = -normalizedMouseY; // 0 to 1
+            // Base the yDrop on the *potential* Z pan defined by mouse Y and its multiplier, before CZO scaling
+            const potentialZPanForTilt = Math.abs(-normalizedMouseY * panZMultiplier); // Use panZMultiplier before CZO scale
+            const yDropAmountBase = potentialZPanForTilt * 0.15;
+            // Also scale final tilt effect by CZO factor, so tilt is less if effective Z pan is less
+            const yDropAmount = yDropAmountBase * zPanScale;
+            lookAtTargetY -= yAdjustFactor * yDropAmount;
+        }
 
-        // --- Apply to Camera ---
+        desiredPanLookAtTargetOnPlane
+            .copy(tankPositionVec)
+            .add(worldPanOffset)
+            .setY(lookAtTargetY);
+
+        currentCameraPosition.current.lerp(finalDesiredCameraPosition, POSITION_LERP_FACTOR);
+        currentLookAt.current.lerp(desiredPanLookAtTargetOnPlane, LOOK_AT_LERP_FACTOR);
+
         camera.position.copy(currentCameraPosition.current);
         camera.lookAt(currentLookAt.current);
     });
 
-    return null; // Controls camera, renders nothing
+    return null;
 }

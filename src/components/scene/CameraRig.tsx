@@ -11,6 +11,7 @@ import {
     LOOK_AT_LERP_FACTOR,
     MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN,
     Z_PAN_SCALING_AT_MIN_CZO,
+    USE_ASPECT_RATIO_FOR_PAN,
 } from '../../constants';
 
 const tankPositionVec = new THREE.Vector3();
@@ -58,58 +59,50 @@ export function CameraRig({ tankRef }: { tankRef: React.RefObject<TankRef | null
 
         const normalizedMouseX = mousePosNormalized.current.x;
         const normalizedMouseY = mousePosNormalized.current.y;
-        const screenAspectRatio = size.width / size.height; // e.g., 1920/1080 = 1.77 (landscape)
 
         let panXMultiplier = MAX_WORLD_PAN_DISTANCE;
         let panZMultiplier = MAX_WORLD_PAN_DISTANCE;
 
-        if (screenAspectRatio > 1) { // Landscape: Width is W, Height is H (W > H)
-            // Screen is wider than it is tall.
-            // Vertical mouse movement (Y-mouse -> Z-world pan) should have more reach.
-            panZMultiplier = MAX_WORLD_PAN_DISTANCE * screenAspectRatio; // Multiply by W/H
-            // Horizontal mouse movement (X-mouse -> X-world pan) uses the base.
-            // panXMultiplier remains MAX_WORLD_PAN_DISTANCE;
-        } else if (screenAspectRatio < 1) { // Portrait: Width is W, Height is H (H > W)
-            // Screen is taller than it is wide.
-            // Horizontal mouse movement (X-mouse -> X-world pan) should have more reach.
-            panXMultiplier = MAX_WORLD_PAN_DISTANCE / screenAspectRatio; // Multiply by H/W (which is 1/aspectRatio)
-            // Vertical mouse movement (Y-mouse -> Z-world pan) uses the base.
-            // panZMultiplier remains MAX_WORLD_PAN_DISTANCE;
+        if (USE_ASPECT_RATIO_FOR_PAN) { // Check the new constant
+            const screenAspectRatio = size.width / size.height;
+            if (screenAspectRatio > 1) { // Landscape
+                panZMultiplier = MAX_WORLD_PAN_DISTANCE * screenAspectRatio;
+            } else if (screenAspectRatio < 1) { // Portrait
+                panXMultiplier = MAX_WORLD_PAN_DISTANCE / screenAspectRatio;
+            }
+            // If square or USE_ASPECT_RATIO_FOR_PAN is false, multipliers remain MAX_WORLD_PAN_DISTANCE
         }
-        // If square (screenAspectRatio == 1), both multipliers remain MAX_WORLD_PAN_DISTANCE.
+        // If USE_ASPECT_RATIO_FOR_PAN is false, panXMultiplier and panZMultiplier
+        // will remain initialized to MAX_WORLD_PAN_DISTANCE, giving uniform pan reach.
 
         const panAmountX = normalizedMouseX * panXMultiplier;
-        let panAmountZ = -normalizedMouseY * panZMultiplier; // Base Z pan from mouse Y
+        let panAmountZ = -normalizedMouseY * panZMultiplier;
 
-        // Adaptive Z-Pan based on CAMERA_Z_OFFSET
-        const actualCameraZOffset = BASE_CAMERA_OFFSET.z;
+        // Adaptive Z-Pan based on CAMERA_Z_OFFSET (using BASE_CAMERA_OFFSET.z)
+        const actualCameraZOffset = BASE_CAMERA_OFFSET.z; // Ensure this uses the Z from BASE_CAMERA_OFFSET
         let zPanScale = 1.0;
         if (actualCameraZOffset < MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN) {
-            if (MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN <= 0) { // Avoid division by zero
+            if (MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN <= 0) {
                 zPanScale = Z_PAN_SCALING_AT_MIN_CZO;
             } else {
                 const t = Math.max(0, actualCameraZOffset) / MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN;
                 zPanScale = Z_PAN_SCALING_AT_MIN_CZO + t * (1.0 - Z_PAN_SCALING_AT_MIN_CZO);
             }
         }
-        // Apply CZO scaling *only* to the Z component of the pan
         panAmountZ *= zPanScale;
 
         worldPanOffset.set(panAmountX, 0, panAmountZ);
-
-        // NO OVERALL MAGNITUDE CLAMP here for elliptical reach.
-        // MAX_WORLD_PAN_DISTANCE is the pan extent when mouse reaches edge of SHORTER screen dimension.
 
         finalDesiredCameraPosition.copy(desiredBaseCameraPosition).add(worldPanOffset);
 
         // Adaptive Look-At Y
         let lookAtTargetY = tankPositionVec.y + LOOK_AT_OFFSET.y;
-        if (normalizedMouseY < 0) { // Mouse in bottom half
-            const yAdjustFactor = -normalizedMouseY; // 0 to 1
-            // Base the yDrop on the *potential* Z pan defined by mouse Y and its multiplier, before CZO scaling
-            const potentialZPanForTilt = Math.abs(-normalizedMouseY * panZMultiplier); // Use panZMultiplier before CZO scale
+        if (normalizedMouseY < 0) {
+            const yAdjustFactor = -normalizedMouseY;
+            // If aspect ratio is ignored, panZMultiplier is MAX_WORLD_PAN_DISTANCE.
+            // If aspect ratio is used, panZMultiplier reflects that.
+            const potentialZPanForTilt = Math.abs(-normalizedMouseY * panZMultiplier);
             const yDropAmountBase = potentialZPanForTilt * 0.15;
-            // Also scale final tilt effect by CZO factor, so tilt is less if effective Z pan is less
             const yDropAmount = yDropAmountBase * zPanScale;
             lookAtTargetY -= yAdjustFactor * yDropAmount;
         }

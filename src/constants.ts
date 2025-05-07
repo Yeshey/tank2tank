@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 
 export const SHOW_FPS_STATS = true; // Set to true to show FPS counter, false to hide
+export const USE_ASPECT_RATIO_FOR_PAN = true; // NEW: Set to false to ignore aspect ratio for panning reach
 
 // =====================================================================
 // World Dimensions (NEW)
@@ -74,7 +75,7 @@ export const MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN = 8.0; // Below this CZO, Z-pan wi
 export const Z_PAN_SCALING_AT_MIN_CZO = 0.5;     // At CZO=0 (or very small), Z-pan is scaled by this (e.g., 50%)
 
 // export const MOUSE_PAN_FACTOR = 8.0; // We'll replace this simple factor
-export const MAX_WORLD_PAN_DISTANCE = 7.0; // NEW: Max distance (world units) mouse pan can shift the view center.
+export const MAX_WORLD_PAN_DISTANCE = 2.0; // NEW: Max distance (world units) mouse pan can shift the view center.
 
 export const POSITION_LERP_FACTOR = 0.05; // Smoothing for camera position
 export const LOOK_AT_LERP_FACTOR = 0.07;  // Smoothing for look-at target

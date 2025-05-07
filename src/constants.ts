@@ -4,8 +4,15 @@ import * as THREE from 'three';
 export const SHOW_FPS_STATS = true; // Set to true to show FPS counter, false to hide
 
 // =====================================================================
+// World Dimensions (NEW)
+// =====================================================================
+export const PHYSICS_GROUND_SIDE_LENGTH = 10000; // e.g., 10km
+export const RAYCAST_PLANE_SIDE_LENGTH = 10000; // e.g., 10km, can be same or larger than physics
+
+// =====================================================================
 // Tank Visual Dimensions
 // =====================================================================
+// ... (rest of your existing constants) ...
 export const BODY_WIDTH = 1.5;
 export const BODY_HEIGHT = 0.6; // Keep base height
 export const BODY_DEPTH = 2.2;
@@ -16,8 +23,8 @@ export const TURRET_RADIUS = 0.5;
 export const TURRET_HEIGHT = 0.5;
 
 // --- Barrel Changes ---
-export const BARREL_RADIUS = 0.05; // *** Much smaller radius ***
-export const BARREL_LENGTH = 1.2;  // Slightly shorter?
+export const BARREL_RADIUS = 0.1; // *** Much smaller radius ***
+export const BARREL_LENGTH = 0.45;  // Slightly shorter?
 // Adjust offset if needed due to length/radius change
 export const BARREL_Z_OFFSET = -(TURRET_RADIUS + BARREL_LENGTH / 2 - 0.1);
 

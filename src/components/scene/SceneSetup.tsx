@@ -7,6 +7,7 @@ import { Environment, Plane } from '@react-three/drei';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import * as THREE from 'three';
 import { InfiniteGridHelper } from '../../helpers/InfiniteGridHelper'; // ADJUST PATH AS NEEDED
+import { PHYSICS_GROUND_SIDE_LENGTH, RAYCAST_PLANE_SIDE_LENGTH } from '../../constants';
 
 // --- Remove tankRef from the interface ---
 interface SceneSetupProps {
@@ -25,7 +26,7 @@ export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>(
         const gridHelper = useMemo(() => {
             // ... Grid helper creation ...
             const helper = new InfiniteGridHelper(
-                10, 100, 0xcccccc, 80
+                2, 20, 0xcccccc, 80
             );
             const material = helper.material as THREE.ShaderMaterial;
             material.transparent = true;
@@ -71,14 +72,22 @@ export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>(
                 />
 
                 {/* ... Physics Ground ... */}
-                 <RigidBody type="fixed" colliders="cuboid" name="physicsGround">
-                    <CuboidCollider args={[1000, 0.1, 1000]} position={[0, -0.1, 0]} />
+                <RigidBody type="fixed" colliders="cuboid" name="physicsGround">
+                    {/* Use the constant for CuboidCollider args (half-extents) */}
+                    <CuboidCollider 
+                        args={[
+                            PHYSICS_GROUND_SIDE_LENGTH / 2, 
+                            0.1, // Keep thickness small for a ground plane
+                            PHYSICS_GROUND_SIDE_LENGTH / 2
+                        ]} 
+                        position={[0, -0.1, 0]} 
+                    />
                 </RigidBody>
 
                 {/* Invisible Plane for Raycasting */}
                 <Plane
                     ref={ref} // Assign the forwarded ref for raycasting
-                    args={[2000, 2000]}
+                    args={[RAYCAST_PLANE_SIDE_LENGTH, RAYCAST_PLANE_SIDE_LENGTH]}
                     rotation={[-Math.PI / 2, 0, 0]}
                     position={[0, -0.05, 0]}
                     name="raycastPlane"

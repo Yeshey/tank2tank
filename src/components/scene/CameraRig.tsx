@@ -19,8 +19,6 @@ const desiredBaseCameraPosition = new THREE.Vector3();
 const worldPanOffset = new THREE.Vector3();
 const finalDesiredCameraPosition = new THREE.Vector3();
 const desiredPanLookAtTargetOnPlane = new THREE.Vector3();
-const worldXAxis = new THREE.Vector3(1, 0, 0); // Not directly used in this version's pan calc but good to have
-const worldZAxis = new THREE.Vector3(0, 0, 1); // Not directly used
 
 export function CameraRig({ tankRef }: { tankRef: React.RefObject<TankRef | null> }) {
     const { camera, size } = useThree();

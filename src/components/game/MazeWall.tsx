@@ -1,6 +1,5 @@
 // src/components/game/MazeWall.tsx
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
-import * as THREE from 'three'; // Not strictly needed here but good practice if you add more THREE features
 import { WALL_COLOR } from '../../constants';
 
 interface MazeWallProps {

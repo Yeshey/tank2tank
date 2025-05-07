@@ -1,3 +1,4 @@
+// src/App.tsx
 import { Suspense, useState /* remove lazy */ } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 // Import GameScene directly again

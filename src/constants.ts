@@ -81,3 +81,29 @@ export const TURRET_GROUP_Y_OFFSET = BODY_HEIGHT / 2 + 0.01; // Position relativ
 export const TURRET_GROUP_Z_OFFSET = -0.2;
 // BARREL_Z_OFFSET already defined above
 export const COLLIDER_Y_OFFSET = 0; // Collider center aligns with body center
+
+
+// =====================================================================
+// Maze Wall Generation (NEW)
+// =====================================================================
+export const WALL_COUNT = 75; // Number of walls to generate
+export const WALL_MIN_SIZE = new THREE.Vector3(2, 3, 2); // Min width, height, depth of a wall segment
+export const WALL_MAX_SIZE = new THREE.Vector3(15, 6, 15); // Max width, height, depth
+export const WALL_SPAWN_AREA_MIN_RADIUS = 15; // Min distance from origin (0,0,Z) to start spawning walls
+export const WALL_SPAWN_AREA_MAX_RADIUS = 150; // Max distance from origin for initial wall spawn
+export const WALL_COLOR = '#6c757d'; // A medium grey color for walls
+export const WALL_MIN_DISTANCE_FROM_TANK_START = 10; // Min distance walls should be from tank's initial position
+
+// =====================================================================
+// Mini-map (NEW)
+// =====================================================================
+export const MINIMAP_ENABLED = true;
+export const MINIMAP_SIZE_PX = 160; // Diameter of the mini-map in pixels
+export const MINIMAP_VIEW_RANGE_RADIUS = 70; // World units visible from the center of the map to its edge
+export const MINIMAP_PLAYER_DOT_COLOR = '#e63946'; // A distinct color for the player
+export const MINIMAP_PLAYER_DOT_SIZE_PX = 8;
+export const MINIMAP_WALL_DOT_COLOR = '#343a40';   // Dark grey for walls on map
+export const MINIMAP_WALL_DOT_MIN_SIZE_PX = 3;
+export const MINIMAP_BACKGROUND_COLOR = 'rgba(220, 220, 220, 0.75)'; // Semi-transparent light grey
+export const MINIMAP_BORDER_COLOR = '#495057';
+export const MINIMAP_UPDATE_INTERVAL = 100; // ms, how often to update map positions (for performance)

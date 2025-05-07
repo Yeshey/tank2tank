@@ -1,0 +1,18 @@
+/* src/components/ui/MiniMap.css */
+.minimap-container {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    border-radius: 50%; /* Main circular shape */
+    border: 2px solid; /* Border color set by JS */
+    overflow: hidden;   /* Crucial to clip dots outside the circle */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 100; /* Ensure it's on top of the 3D canvas */
+    pointer-events: none; /* So it doesn't interfere with game controls */
+  }
+  
+  .minimap-dot {
+    position: absolute;
+    /* background-color set by JS */
+    /* border-radius set by JS */
+  }

@@ -1,32 +1,24 @@
 // src/gameplay/TankInputController.ts
 import { PhysicsBody, Vector3, Quaternion, TransformNode, Axis, Scalar } from '@babylonjs/core/Legacy/legacy';
 import {
-    TANK_TOTAL_FORWARD_FORCE,
-    TANK_PIVOT_TRACK_FORCE,
-    MOVING_TURN_DIFFERENTIAL_FORCE,
-    ACTIVE_LINEAR_BRAKING_FACTOR,
-    ACTIVE_ANGULAR_BRAKING_FACTOR,
-    MAX_LINEAR_VELOCITY,
-    MAX_ANGULAR_VELOCITY,
-    ANTI_DRIFT_FACTOR,
-    MIN_SPEED_FOR_ANTI_DRIFT,
-    MAX_ANTI_DRIFT_IMPULSE_PER_FRAME, // New constant
-    WHEEL_X_OFFSET,
+    TARGET_MAX_LINEAR_VELOCITY,
+    TARGET_PIVOT_ANGULAR_VELOCITY,
+    TARGET_MOVING_TURN_ANGULAR_VELOCITY,
+    LERP_ALPHA_LINEAR,      // Corrected: Using LERP_ALPHA constants
+    LERP_ALPHA_ANGULAR,     // Corrected: Using LERP_ALPHA constants
+    LINEAR_DAMPING_FACTOR,
+    ANGULAR_DAMPING_FACTOR,
+    DAMPING_EFFECT_MULTIPLIER
 } from '../constants';
 
 // Temporary vectors
-const _linVel = new Vector3();
-const _angVel = new Vector3();
+const _currentLinVel = new Vector3();
+const _currentAngVel = new Vector3();
 const _worldForward = new Vector3();
-const _worldRight = new Vector3();
-const _impulse = new Vector3();
-const _angularImpulse = new Vector3();
+const _targetLinVelWorld = new Vector3(); // Target linear velocity in world space
+const _newLinVel = new Vector3();
+const _newAngVel = new Vector3();
 
-const _leftTrackLocalOffset = new Vector3(-WHEEL_X_OFFSET, 0, 0);
-const _rightTrackLocalOffset = new Vector3(WHEEL_X_OFFSET, 0, 0);
-const _leftTrackWorldPos = new Vector3();
-const _rightTrackWorldPos = new Vector3();
-const _antiDriftImpulseApplied = new Vector3(); // To apply the limited impulse
 
 export class TankInputController {
     private tankBody: PhysicsBody;
@@ -57,118 +49,83 @@ export class TankInputController {
     public updateMovement(delta: number): void {
         if (!this.tankBody || !this.tankNode || delta <= 0) return;
 
-        this.tankBody.getLinearVelocityToRef(_linVel);
-        this.tankBody.getAngularVelocityToRef(_angVel);
+        this.tankBody.getLinearVelocityToRef(_currentLinVel);
+        this.tankBody.getAngularVelocityToRef(_currentAngVel);
+        this.tankNode.getDirectionToRef(Axis.Z, _worldForward); // Local Z is forward
 
-        this.tankNode.getDirectionToRef(Axis.Z, _worldForward);
-        this.tankNode.getDirectionToRef(Axis.X, _worldRight);
+        const forwardInput = (this.keysPressed['w'] || this.keysPressed['arrowup']);
+        const backwardInput = (this.keysPressed['s'] || this.keysPressed['arrowdown']);
+        const rightTurnInput = (this.keysPressed['a'] || this.keysPressed['arrowleft']);
+        const leftTurnInput = (this.keysPressed['d'] || this.keysPressed['arrowright']);
 
-        Vector3.TransformCoordinatesToRef(_leftTrackLocalOffset, this.tankNode.getWorldMatrix(), _leftTrackWorldPos);
-        Vector3.TransformCoordinatesToRef(_rightTrackLocalOffset, this.tankNode.getWorldMatrix(), _rightTrackWorldPos);
-
-        let leftTrackForceMagnitude = 0;
-        let rightTrackForceMagnitude = 0;
-        let isMovingForwardOrBackward = false;
-        let isTurning = false;
-
-        const forwardInput = (this.keysPressed['w'] || this.keysPressed['arrowup']) ? 1 : 0;
-        const backwardInput = (this.keysPressed['s'] || this.keysPressed['arrowdown']) ? 1 : 0;
-        const leftTurnInput = (this.keysPressed['a'] || this.keysPressed['arrowleft']) ? 1 : 0;
-        const rightTurnInput = (this.keysPressed['d'] || this.keysPressed['arrowright']) ? 1 : 0;
-
-        const baseForwardForcePerTrack = TANK_TOTAL_FORWARD_FORCE / 2;
-
+        let targetForwardSpeed = 0;
         if (forwardInput) {
-            leftTrackForceMagnitude += baseForwardForcePerTrack;
-            rightTrackForceMagnitude += baseForwardForcePerTrack;
-            isMovingForwardOrBackward = true;
-        }
-        if (backwardInput) {
-            leftTrackForceMagnitude -= baseForwardForcePerTrack * 0.7;
-            rightTrackForceMagnitude -= baseForwardForcePerTrack * 0.7;
-            isMovingForwardOrBackward = true;
+            targetForwardSpeed = TARGET_MAX_LINEAR_VELOCITY;
+        } else if (backwardInput) {
+            targetForwardSpeed = -TARGET_MAX_LINEAR_VELOCITY * 0.7; // Slower reverse
         }
 
-        // --- Turning Logic ---
-        const currentSpeed = _linVel.length();
-        // Refined speed factor: less aggressive scaling, starts a bit later.
-        // Max scaling factor is 1.0 to prevent over-strengthening the base differential.
-        const speedFactorForTurning = Scalar.Clamp(currentSpeed / (MAX_LINEAR_VELOCITY * 0.66), 0.6, 1.0);
-        const effectiveMovingTurnDifferential = MOVING_TURN_DIFFERENTIAL_FORCE * speedFactorForTurning;
+        // --- Linear Velocity Control (along tank's forward axis) ---
+        const currentSpeedAlongForward = Vector3.Dot(_currentLinVel, _worldForward);
+        
+        // Interpolate current forward speed towards targetForwardSpeed using LERP_ALPHA_LINEAR
+        // The LERP_ALPHA directly controls responsiveness per frame.
+        // To make it frame-rate independent in feel, you might do: 1 - Math.pow(1 - LERP_ALPHA_LINEAR, delta * 60)
+        // But for simplicity and direct arcade feel, a fixed alpha often works well if frame rates are reasonably stable.
+        // Let's use a slightly adjusted approach for LERP alpha to make it feel like a rate.
+        const effectiveLinearLerpAlpha = 1 - Math.exp(-LERP_ALPHA_LINEAR * delta * 60); // Makes LERP_ALPHA_LINEAR act more like a per-second rate
 
-        if (rightTurnInput) { 
-            if (isMovingForwardOrBackward) {
-                leftTrackForceMagnitude += effectiveMovingTurnDifferential / 2;
-                rightTrackForceMagnitude -= effectiveMovingTurnDifferential / 2;
-            } else { 
-                leftTrackForceMagnitude += TANK_PIVOT_TRACK_FORCE;
-                rightTrackForceMagnitude -= TANK_PIVOT_TRACK_FORCE;
-            }
-            isTurning = true;
-        }
-        if (leftTurnInput) { 
-            if (isMovingForwardOrBackward) {
-                rightTrackForceMagnitude += effectiveMovingTurnDifferential / 2;
-                leftTrackForceMagnitude -= effectiveMovingTurnDifferential / 2;
-            } else { 
-                rightTrackForceMagnitude += TANK_PIVOT_TRACK_FORCE;
-                leftTrackForceMagnitude -= TANK_PIVOT_TRACK_FORCE;
-            }
-            isTurning = true;
+        let newSpeedAlongForward = Scalar.Lerp(
+            currentSpeedAlongForward,
+            targetForwardSpeed,
+            effectiveLinearLerpAlpha // Use the LERP_ALPHA constant
+        );
+
+        if (!forwardInput && !backwardInput) {
+            newSpeedAlongForward *= (1 - LINEAR_DAMPING_FACTOR * delta * DAMPING_EFFECT_MULTIPLIER);
         }
         
-        if (Math.abs(leftTrackForceMagnitude) > 0.01) {
-            _impulse.copyFrom(_worldForward).scaleInPlace(leftTrackForceMagnitude * delta);
-            this.tankBody.applyImpulse(_impulse, _leftTrackWorldPos);
-        }
-        if (Math.abs(rightTrackForceMagnitude) > 0.01) {
-            _impulse.copyFrom(_worldForward).scaleInPlace(rightTrackForceMagnitude * delta);
-            this.tankBody.applyImpulse(_impulse, _rightTrackWorldPos);
+        _targetLinVelWorld.copyFrom(_worldForward).scaleInPlace(newSpeedAlongForward);
+
+        const lateralVel = _currentLinVel.subtract(_worldForward.scale(currentSpeedAlongForward));
+        lateralVel.scaleInPlace(1 - LINEAR_DAMPING_FACTOR * delta * DAMPING_EFFECT_MULTIPLIER * 0.8); 
+        
+        _newLinVel.copyFrom(_targetLinVelWorld).addInPlace(lateralVel);
+        this.tankBody.setLinearVelocity(_newLinVel);
+
+
+        // --- Angular Velocity Control (around tank's Y axis) ---
+        let targetAngularSpeedY = 0;
+        const isMoving = forwardInput || backwardInput;
+
+        if (rightTurnInput) {
+            targetAngularSpeedY = isMoving ? -TARGET_MOVING_TURN_ANGULAR_VELOCITY : -TARGET_PIVOT_ANGULAR_VELOCITY;
+        } else if (leftTurnInput) {
+            targetAngularSpeedY = isMoving ? TARGET_MOVING_TURN_ANGULAR_VELOCITY : TARGET_PIVOT_ANGULAR_VELOCITY;
         }
 
-        // --- Anti-Drift Mechanism ---
-        const currentSpeedSq = _linVel.lengthSquared();
-        if (currentSpeedSq > MIN_SPEED_FOR_ANTI_DRIFT * MIN_SPEED_FOR_ANTI_DRIFT) {
-            const lateralVelocity = Vector3.Dot(_linVel, _worldRight);
-            
-            // Calculate desired anti-drift impulse for this frame
-            _antiDriftImpulseApplied.copyFrom(_worldRight).scaleInPlace(-lateralVelocity * ANTI_DRIFT_FACTOR * delta);
-            
-            // Limit the magnitude of the anti-drift impulse per frame
-            const impulseMagnitudeSq = _antiDriftImpulseApplied.lengthSquared();
-            const maxImpulseSq = (MAX_ANTI_DRIFT_IMPULSE_PER_FRAME * delta) * (MAX_ANTI_DRIFT_IMPULSE_PER_FRAME * delta);
+        const effectiveAngularLerpAlpha = 1 - Math.exp(-LERP_ALPHA_ANGULAR * delta * 60); // Makes LERP_ALPHA_ANGULAR act more like a per-second rate
 
-            if (impulseMagnitudeSq > maxImpulseSq && maxImpulseSq > 0) {
-                _antiDriftImpulseApplied.normalize().scaleInPlace(Math.sqrt(maxImpulseSq));
-            }
-            
-            this.tankBody.applyImpulse(_antiDriftImpulseApplied, this.tankNode.getAbsolutePosition());
-        }
+        let newAngularSpeedY = Scalar.Lerp(
+            _currentAngVel.y,
+            targetAngularSpeedY,
+            effectiveAngularLerpAlpha // Use the LERP_ALPHA constant
+        );
 
-        // --- Active Braking ---
-        if (!isMovingForwardOrBackward && currentSpeedSq > 0.01) {
-            _impulse.copyFrom(_linVel).scaleInPlace(-ACTIVE_LINEAR_BRAKING_FACTOR * delta);
-            this.tankBody.applyImpulse(_impulse, this.tankNode.getAbsolutePosition());
-        }
-        if (!isTurning && Math.abs(_angVel.y) > 0.01) {
-            _angularImpulse.set(0, _angVel.y * -ACTIVE_ANGULAR_BRAKING_FACTOR * delta, 0);
-            this.tankBody.applyAngularImpulse(_angularImpulse);
-        }
-
-        // --- Velocity Clamping ---
-        this.tankBody.getLinearVelocityToRef(_linVel);
-        if (_linVel.lengthSquared() > MAX_LINEAR_VELOCITY * MAX_LINEAR_VELOCITY) {
-            _linVel.normalize().scaleInPlace(MAX_LINEAR_VELOCITY);
-            this.tankBody.setLinearVelocity(_linVel);
+        if (!leftTurnInput && !rightTurnInput) {
+            newAngularSpeedY *= (1 - ANGULAR_DAMPING_FACTOR * delta * DAMPING_EFFECT_MULTIPLIER);
         }
         
-        this.tankBody.getAngularVelocityToRef(_angVel);
-        if (Math.abs(_angVel.y) > MAX_ANGULAR_VELOCITY) {
-            _angVel.y = Math.sign(_angVel.y) * MAX_ANGULAR_VELOCITY;
-            this.tankBody.setAngularVelocity(new Vector3(_angVel.x, _angVel.y, _angVel.z));
-        }
-        
-        this._isCurrentlyMoving = _linVel.lengthSquared() > 0.1 || Math.abs(_angVel.y) > 0.1;
+        _newAngVel.set(
+            _currentAngVel.x * (1 - ANGULAR_DAMPING_FACTOR * delta * DAMPING_EFFECT_MULTIPLIER),
+            newAngularSpeedY,
+            _currentAngVel.z * (1 - ANGULAR_DAMPING_FACTOR * delta * DAMPING_EFFECT_MULTIPLIER)
+        );
+        this.tankBody.setAngularVelocity(_newAngVel);
+
+        this.tankBody.getLinearVelocityToRef(_currentLinVel);
+        this.tankBody.getAngularVelocityToRef(_currentAngVel);
+        this._isCurrentlyMoving = _currentLinVel.lengthSquared() > 0.001 || Math.abs(_currentAngVel.y) > 0.001;
     }
 
     public isMoving(): boolean {

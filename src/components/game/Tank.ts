@@ -8,12 +8,11 @@ import {
     PhysicsBody,
     PhysicsShapeBox,
     PhysicsMotionType,
-    // TransformNode, // Only if needed beyond Mesh
+    // TransformNode, 
 } from '@babylonjs/core/Legacy/legacy';
 import { TankModel } from './TankModel';
 import { TankInputController } from '../../gameplay/TankInputController';
-// import { useTurretAiming_Babylon } from '../../hooks/useTurretAiming'; // REMOVE THIS
-import { TurretAimingController } from '../../gameplay/TurretAimingController'; // IMPORT THE NEW CONTROLLER
+import { TurretAimingController } from '../../gameplay/TurretAimingController';
 import {
     TANK_MASS, DEFAULT_FRICTION, DEFAULT_RESTITUTION,
     BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,
@@ -30,7 +29,7 @@ export class Tank implements TankHandle {
     public model: TankModel;
     public body!: PhysicsBody;
     private inputController: TankInputController;
-    private aimingController: TurretAimingController; // Instance for aiming
+    private aimingController: TurretAimingController;
 
     private unregisterObservables: () => void;
 
@@ -39,19 +38,44 @@ export class Tank implements TankHandle {
         this.model = new TankModel(name, scene, shadowGenerator);
         this.model.rootMesh.position = initialPosition.clone();
 
-        // Physics Body Setup (as before)
-        this.body = new PhysicsBody(this.model.rootMesh, PhysicsMotionType.DYNAMIC, false, scene);
-        const tankShape = new PhysicsShapeBox( Vector3.Zero(), Quaternion.Identity(), new Vector3(BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH), scene);
-        this.body.shape = tankShape;
-        this.body.setMassProperties({ mass: TANK_MASS });
-        this.body.setLinearDamping(0.5);
-        this.body.setAngularDamping(0.8);
-        tankShape.material = { friction: DEFAULT_FRICTION, restitution: DEFAULT_RESTITUTION };
+        this.body = new PhysicsBody(
+            this.model.rootMesh,
+            PhysicsMotionType.DYNAMIC,
+            false,
+            scene
+        );
 
-        // Input Controller
+        const tankShape = new PhysicsShapeBox(
+            Vector3.Zero(),
+            Quaternion.Identity(),
+            new Vector3(BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH),
+            scene
+        );
+        this.body.shape = tankShape;
+
+        this.body.setMassProperties({
+            mass: TANK_MASS,
+            // You might want to define inertia to make it harder to flip and easier to yaw.
+            // For a box with dimensions w, h, d:
+            // Ix = (m/12)*(h^2+d^2)
+            // Iy = (m/12)*(w^2+d^2)  <- Axis of rotation for yaw
+            // Iz = (m/12)*(w^2+h^2)
+            // To make yaw easier, Iy should be relatively smaller than Ix, Iz, or
+            // ensure external torques are primarily around Y.
+            // For now, default inertia is fine, but consider this for advanced tuning.
+        });
+
+        this.body.setLinearDamping(0.5);
+        // --- REDUCE ANGULAR DAMPING SIGNIFICANTLY ---
+        this.body.setAngularDamping(0.2); // Previously 0.8. Try 0.1 or 0.2. Max is 1.0.
+
+        tankShape.material = {
+            friction: DEFAULT_FRICTION,
+            restitution: DEFAULT_RESTITUTION,
+        };
+
         this.inputController = new TankInputController(this.body, this.model.rootMesh);
 
-        // Aiming Controller
         const groundPlaneAbstract = scene.getMeshByName("ground");
         let groundPlaneMesh: Mesh | null = null;
         if (groundPlaneAbstract instanceof Mesh) {
@@ -66,7 +90,6 @@ export class Tank implements TankHandle {
             groundPlaneMesh
         );
 
-        // Render Loop
         let lastTime = performance.now();
         const beforeRenderObserver = this.scene.onBeforeRenderObservable.add(() => {
             const currentTime = performance.now();
@@ -75,7 +98,7 @@ export class Tank implements TankHandle {
             if (delta <= 0) return;
 
             this.inputController.updateMovement(delta);
-            this.aimingController.updateAiming(delta); // Use the aiming controller
+            this.aimingController.updateAiming(delta);
             this.model.NameTagVisibility = !this.inputController.isMoving();
 
             const angVel = this.body.getAngularVelocity();
@@ -102,7 +125,7 @@ export class Tank implements TankHandle {
     public dispose() {
         this.unregisterObservables();
         this.inputController.dispose();
-        this.aimingController.dispose(); // Dispose aiming controller
+        this.aimingController.dispose();
         if (this.body) {
             this.body.dispose();
         }

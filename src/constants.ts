@@ -96,7 +96,8 @@ export const MINIMAP_UPDATE_INTERVAL = 100; // ms
 export const DEFAULT_FRICTION = 0.5;    // Friction between physics bodies
 export const DEFAULT_RESTITUTION = 0.1; // Bounciness of physics bodies
 export const TANK_MASS = 100;           // Mass of the tank physics body (affects collision response)
-export const WALL_MASS = 0;             // Static walls
+// export const WALL_MASS = 0;             // Static walls
+export const WALL_MASS = 1000;             // Static walls
 
 // Camera Rig Specific Constants (if you have a custom CameraRig.ts)
 export const BASE_CAMERA_OFFSET = new BABYLON.Vector3(0, 25, -12);

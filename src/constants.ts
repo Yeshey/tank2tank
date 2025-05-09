@@ -86,7 +86,7 @@ export const MINIMAP_BORDER_COLOR = '#495057';
 export const MINIMAP_UPDATE_INTERVAL = 100; // ms
 
 // Physics
-export const DEFAULT_FRICTION = 0.8; // Increased for less sliding
+export const DEFAULT_FRICTION = 0.90; // Increased for less sliding
 export const DEFAULT_RESTITUTION = 0.1; // Bounciness
 export const TANK_MASS = 1500; // Kilograms
 export const WALL_MASS = 0; // Static
@@ -116,3 +116,24 @@ export const Z_PAN_SCALING_AT_MIN_CZO = 0.3;      // At very close distances, Z-
 
 export const POSITION_LERP_FACTOR = 0.08; // Smoothing for camera position (0.01 to 0.1 is common), slightly increased for faster tank
 export const LOOK_AT_LERP_FACTOR = 0.12;   // Smoothing for look-at target, slightly increased
+
+
+// --- Forces for Track-Based Movement ---
+// Total forward force when both tracks are driving straight
+export const TANK_TOTAL_FORWARD_FORCE = 45000; // Increased for strong acceleration
+// Force applied by each track during a pivot turn (one forward, one backward)
+export const TANK_PIVOT_TRACK_FORCE = 25000;
+// Factor by which an inner track's force is reduced (or outer track increased) during a moving turn
+// e.g., if 0.5, inner track force becomes (TotalForward/2 * 0.5), outer becomes (TotalForward/2 * 1.5)
+// A simpler way: just define how much extra turning force is added/subtracted from the base forward force.
+export const MOVING_TURN_DIFFERENTIAL_FORCE = 20000; // Add this to outer, subtract from inner
+export const MAX_ANTI_DRIFT_IMPULSE_PER_FRAME = 750; // NEW: Limit max anti-drift impulse per frame to prevent over-correction
+
+// --- Braking and Damping ---
+export const ACTIVE_LINEAR_BRAKING_FACTOR = 80; // Multiplier for active linear braking impulse
+export const ACTIVE_ANGULAR_BRAKING_FACTOR = 60; // Multiplier for active angular braking impulse
+
+// --- Anti-Drift ---
+// How strongly the tank resists sideways motion. Higher = less drift.
+export const ANTI_DRIFT_FACTOR = 30000; // This is a force factor, needs tuning
+export const MIN_SPEED_FOR_ANTI_DRIFT = 0.5; // Apply anti-drift only above this speed

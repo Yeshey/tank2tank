@@ -8,7 +8,6 @@ import {
     PhysicsBody,
     PhysicsShapeBox,
     PhysicsMotionType,
-    // TransformNode, 
 } from '@babylonjs/core/Legacy/legacy';
 import { TankModel } from './TankModel';
 import { TankInputController } from '../../gameplay/TankInputController';
@@ -38,7 +37,6 @@ export class Tank implements TankHandle {
         this.model = new TankModel(name, scene, shadowGenerator);
         this.model.rootMesh.position = initialPosition.clone();
 
-        // Ensure the root mesh has a quaternion for physics body orientation
         if (!this.model.rootMesh.rotationQuaternion) {
             this.model.rootMesh.rotationQuaternion = Quaternion.Identity();
         }
@@ -51,30 +49,23 @@ export class Tank implements TankHandle {
         );
 
         const tankShape = new PhysicsShapeBox(
-            Vector3.Zero(), // Center of shape in mesh's local space
-            Quaternion.Identity(), // Rotation of shape in mesh's local space
-            new Vector3(BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH), // Extents
+            Vector3.Zero(),
+            Quaternion.Identity(),
+            new Vector3(BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH),
             scene
         );
         this.body.shape = tankShape;
 
         this.body.setMassProperties({
             mass: TANK_MASS,
-            // inertia: new Vector3(ix, iy, iz) // Optional: define principal moments of inertia if needed for specific rotational behavior
-            // For now, let Havok compute inertia from shape and mass.
         });
 
-        // --- DAMPING ---
-        // Linear damping reduces velocity over time (like air resistance or friction).
-        // Higher values mean more "sluggish" movement but less drifting.
-        this.body.setLinearDamping(0.9); // Increased significantly to reduce drift
-
-        // Angular damping reduces angular velocity over time.
-        // Low values make turning responsive; high values make it sluggish.
-        this.body.setAngularDamping(0.5); // Slightly increased to prevent excessive spinning, but still responsive.
+        // Damping still helps, but primary control comes from active forces/braking.
+        this.body.setLinearDamping(0.5); // Moderate linear damping
+        this.body.setAngularDamping(0.85); // Higher angular damping to prevent over-rotation
 
         tankShape.material = {
-            friction: DEFAULT_FRICTION, // Defined in constants, e.g., 0.8
+            friction: DEFAULT_FRICTION,
             restitution: DEFAULT_RESTITUTION,
         };
 
@@ -90,14 +81,14 @@ export class Tank implements TankHandle {
         this.aimingController = new TurretAimingController(
             scene,
             this.model.getTurret(),
-            this.model.rootMesh, // tank body node
+            this.model.rootMesh,
             groundPlaneMesh
         );
 
         let lastTime = performance.now();
         const beforeRenderObserver = this.scene.onBeforeRenderObservable.add(() => {
             const currentTime = performance.now();
-            const delta = Math.min(0.1, (currentTime - lastTime) / 1000); // Clamp delta
+            const delta = Math.min(0.1, (currentTime - lastTime) / 1000);
             lastTime = currentTime;
             if (delta <= 0) return;
 
@@ -105,7 +96,6 @@ export class Tank implements TankHandle {
             this.aimingController.updateAiming(delta);
             this.model.NameTagVisibility = !this.inputController.isMoving();
 
-            // Clamp angular velocity (already in TankInputController, but can be a safeguard here too)
             const angVel = this.body.getAngularVelocity();
             if (angVel && Math.abs(angVel.y) > MAX_ANGULAR_VELOCITY) {
                  this.body.setAngularVelocity(new Vector3(angVel.x, Math.sign(angVel.y) * MAX_ANGULAR_VELOCITY, angVel.z));
@@ -132,7 +122,7 @@ export class Tank implements TankHandle {
         this.inputController.dispose();
         this.aimingController.dispose();
         if (this.body) {
-            this.body.dispose(); // This should also dispose the shape
+            this.body.dispose();
         }
         this.model.dispose();
     }

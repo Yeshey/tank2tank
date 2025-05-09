@@ -10,7 +10,7 @@ import {
     // PhysicsImpostor, // V1 - Removed
     ShadowGenerator,
 } from '@babylonjs/core/Legacy/legacy';
-import type { Nullable } from '@babylonjs/core/types'; // Nullable might still be useful for getPhysicsImpostor if kept temporarily
+// import type { Nullable } from '@babylonjs/core/types'; // Nullable might still be useful for getPhysicsImpostor if kept temporarily
 import * as BABYLON from '@babylonjs/core/Legacy/legacy';
 import {
     BODY_WIDTH, BODY_HEIGHT, BODY_DEPTH,

@@ -2,7 +2,8 @@
 import { PhysicsBody, Vector3, Quaternion, TransformNode } from '@babylonjs/core/Legacy/legacy';
 import {
     MOVE_FORCE, BRAKE_FORCE_MULTIPLIER, MAX_LINEAR_VELOCITY,
-    TURN_TORQUE, BRAKE_TORQUE_MULTIPLIER, // TURN_TORQUE will be re-evaluated
+    //TURN_TORQUE,  // TURN_TORQUE will be re-evaluated
+    BRAKE_TORQUE_MULTIPLIER, 
 } from '../constants';
 
 const _forwardDirLocal = new Vector3(0, 0, 1);
@@ -76,7 +77,7 @@ export class TankInputController {
         // Let's define a more direct turning strength.
         // This value will be the angular impulse applied per second of holding the key.
         // Adjust TANK_YAW_IMPULSE_PER_SECOND for desired turn rate.
-        const TANK_YAW_IMPULSE_PER_SECOND = 250; // New constant - units: kg*m^2/s^2 or N*m*s / s = N*m (effective torque)
+        // const TANK_YAW_IMPULSE_PER_SECOND = 250; // New constant - units: kg*m^2/s^2 or N*m*s / s = N*m (effective torque)
                                                 // Actually, this should be kg*m^2/s (angular momentum units) applied per second.
                                                 // Let's treat this as the target angular impulse strength if key held for 1 sec.
                                                 // So, for a frame, it's this * delta.
@@ -93,7 +94,7 @@ export class TankInputController {
         // Let's use the TURN_TORQUE constant but with a revised scaling factor.
         // TURN_TORQUE was 10000.
         // If TURN_TORQUE represents a desired "torque strength", then impulse = Torque * delta.
-        const angularImpulseMagnitude = TURN_TORQUE * delta * 0.02; // PREVIOUSLY: 0.05. Try 0.02 or even lower if TURN_TORQUE is too high.
+        // const angularImpulseMagnitude = TURN_TORQUE * delta * 0.02; // PREVIOUSLY: 0.05. Try 0.02 or even lower if TURN_TORQUE is too high.
                                                                   // Or, significantly increase if it was too low. Let's increase. Try 0.2
         // const angularImpulseMagnitude = TURN_TORQUE * delta * 0.20; // Test with a larger factor
         // Let's try an even simpler, more direct value for the impulse per frame.

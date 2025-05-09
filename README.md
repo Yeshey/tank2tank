@@ -1,5 +1,9 @@
 # tank2tank
 
+Show all errors:
+
+`npx tsc --noEmit --project tsconfig.app.json --pretty false --noErrorTruncation`
+
 Tank2tank with libp2p
 
 Access the site here: https://yeshey.github.io/tank2tank/

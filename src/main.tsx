@@ -1,10 +1,13 @@
-// import { StrictMode } from 'react' // StrictMode commented out
+// src/main.tsx
 import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import App from './App'
+import './index.css' // Global styles
 
-createRoot(document.getElementById('root')!).render(
-  // <StrictMode> // StrictMode commented out
-    <App />
-  // </StrictMode>, // StrictMode commented out
+const rootElement = document.getElementById('root')!
+const root = createRoot(rootElement)
+
+root.render(
+  // <React.StrictMode> // Re-enable if desired, but can cause double useEffect in dev
+  <App />
+  // </React.StrictMode>
 )

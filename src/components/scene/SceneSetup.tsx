@@ -1,101 +1,87 @@
-import { forwardRef, useRef, useMemo } from 'react';
-// No longer need useFrame here if it was only for the grid
-// No longer need TankRef type here
-// import { useFrame } from '@react-three/fiber';
-// import type { TankRef } from '../game/Tank';
-import { Environment, Plane } from '@react-three/drei';
-import { RigidBody, CuboidCollider } from '@react-three/rapier';
-import * as THREE from 'three';
-import { InfiniteGridHelper } from '../../helpers/InfiniteGridHelper'; // ADJUST PATH AS NEEDED
-import { PHYSICS_GROUND_SIDE_LENGTH, RAYCAST_PLANE_SIDE_LENGTH } from '../../constants';
+// src/components/scene/SceneSetup.tsx
+import {
+    ShadowGenerator,
+    Vector3,
+    HemisphericLight,
+    DirectionalLight,
+    MeshBuilder,
+    StandardMaterial,
+    Color3,
+    // PhysicsImpostor, // Remove V1 Impostor
+    Scene,
+    Mesh,
+    PhysicsBody,        // V2 API
+    PhysicsShapeBox,    // V2 API
+    PhysicsMotionType,   // V2 API
+    Quaternion
+} from '@babylonjs/core/Legacy/legacy';
+import { GridMaterial } from '@babylonjs/materials/grid';
+import { PHYSICS_GROUND_SIDE_LENGTH, DEFAULT_FRICTION, DEFAULT_RESTITUTION } from '../../constants';
 
-// --- Remove tankRef from the interface ---
-interface SceneSetupProps {
-    // tankRef: React.RefObject<TankRef | null>; // Remove this line
-    // Add any other props if needed later
+export interface SceneEnvironment {
+    ground: Mesh;
+    shadowGenerator: ShadowGenerator;
 }
 
-export const SceneSetup = forwardRef<THREE.Mesh, SceneSetupProps>(
-    // Remove tankRef from the props destructuring
-    // ({ tankRef }, ref) => {
-    ({}, ref) => { // Receive only the forwarded ref
+export function setupSceneEnvironment(scene: Scene): SceneEnvironment {
+    const ambientLight = new HemisphericLight("hemilight", new Vector3(0.1, 1, 0.1), scene);
+    ambientLight.intensity = 0.6;
 
-        // tankWorldPos is no longer needed if grid isn't moved manually
-        // const tankWorldPos = useMemo(() => new THREE.Vector3(), []);
+    const directionalLight = new DirectionalLight("dir01", new Vector3(-0.5, -0.8, -0.3), scene);
+    directionalLight.position = new Vector3(25, 30, 15);
+    directionalLight.intensity = 0.8;
 
-        const gridHelper = useMemo(() => {
-            // ... Grid helper creation ...
-            const helper = new InfiniteGridHelper(
-                2, 20, 0xcccccc, 80
-            );
-            const material = helper.material as THREE.ShaderMaterial;
-            material.transparent = true;
-            material.depthWrite = false;
-            helper.position.y = -0.01;
-            return helper;
-        }, []);
+    const shadowGenerator = new ShadowGenerator(2048, directionalLight);
+    shadowGenerator.useExponentialShadowMap = true;
+    shadowGenerator.darkness = 0.3;
 
-        // Ref for the grid helper primitive (optional, only needed if accessed)
-        const gridPrimitiveRef = useRef<InfiniteGridHelper>(null!);
+    const ground = MeshBuilder.CreateGround("ground", {
+        width: PHYSICS_GROUND_SIDE_LENGTH,
+        height: PHYSICS_GROUND_SIDE_LENGTH,
+    }, scene);
 
-        // --- Ensure the useFrame that moved the grid IS REMOVED ---
-        /*
-         useFrame(() => {
-            // THIS BLOCK SHOULD BE GONE
-         });
-        */
-         // ---------------------------------------------------------
+    const useGridMaterial = true;
+    if (useGridMaterial) {
+        const gridMaterial = new GridMaterial("gridMat", scene);
+        gridMaterial.majorUnitFrequency = 5;
+        gridMaterial.minorUnitVisibility = 0.45;
+        gridMaterial.gridRatio = 1;
+        gridMaterial.mainColor = new Color3(0.7, 0.7, 0.7);
+        gridMaterial.lineColor = new Color3(0.2, 0.2, 0.2);
+        gridMaterial.opacity = 1;
+        ground.material = gridMaterial;
+    } else {
+        const groundMaterial = new StandardMaterial("groundMat", scene);
+        groundMaterial.diffuseColor = new Color3(0.5, 0.55, 0.5);
+        groundMaterial.specularColor = new Color3(0.1, 0.1, 0.1);
+        ground.material = groundMaterial;
+    }
 
-        return (
-            <>
-                {/* ... Lights, Environment ... */}
-                 <ambientLight intensity={1} />
-                 <directionalLight
-                    position={[15, 20, 10]}
-                    intensity={2.5}
-                    castShadow
-                    // ... shadow props ...
-                     shadow-mapSize-width={2048}
-                    shadow-mapSize-height={2048}
-                    shadow-camera-far={50}
-                    shadow-camera-left={-15}
-                    shadow-camera-right={15}
-                    shadow-camera-top={15}
-                    shadow-camera-bottom={-15}
-                />
-                <Environment preset="city" background={false} />
+    // --- Physics V2 for Ground ---
+    // Create a physics body for the ground
+    const groundBody = new PhysicsBody(ground, PhysicsMotionType.STATIC, false, scene);
+    // Create a box shape for the ground. The ground mesh is thin, so a small height for the physics shape is fine.
+    // Dimensions are full extents.
+    const groundShape = new PhysicsShapeBox(
+        Vector3.Zero(), // Center of the shape relative to the mesh
+        Quaternion.Identity(), // Rotation of the shape relative to the mesh
+        new Vector3(PHYSICS_GROUND_SIDE_LENGTH, 0.1, PHYSICS_GROUND_SIDE_LENGTH), // Extents (full width, small height, full depth)
+        scene
+    );
+    groundBody.shape = groundShape;
+    // Set material properties for physics (friction, restitution)
+    groundBody.setMassProperties({ mass: 0 }); // Mass 0 makes it static
+    groundShape.material = { friction: DEFAULT_FRICTION, restitution: DEFAULT_RESTITUTION };
+    // --- End Physics V2 for Ground ---
 
-                {/* Primitive for the grid helper */}
-                <primitive
-                    object={gridHelper}
-                    ref={gridPrimitiveRef} // Assign ref if needed elsewhere
-                />
+    // V1 Impostor - REMOVE THIS:
+    // ground.physicsImpostor = new PhysicsImpostor(
+    //     ground,
+    //     PhysicsImpostor.BoxImpostor,
+    //     { mass: 0, friction: DEFAULT_FRICTION, restitution: DEFAULT_RESTITUTION },
+    //     scene
+    // );
+    ground.receiveShadows = true;
 
-                {/* ... Physics Ground ... */}
-                <RigidBody type="fixed" colliders="cuboid" name="physicsGround">
-                    {/* Use the constant for CuboidCollider args (half-extents) */}
-                    <CuboidCollider 
-                        args={[
-                            PHYSICS_GROUND_SIDE_LENGTH / 2, 
-                            0.1, // Keep thickness small for a ground plane
-                            PHYSICS_GROUND_SIDE_LENGTH / 2
-                        ]} 
-                        position={[0, -0.1, 0]} 
-                    />
-                </RigidBody>
-
-                {/* Invisible Plane for Raycasting */}
-                <Plane
-                    ref={ref} // Assign the forwarded ref for raycasting
-                    args={[RAYCAST_PLANE_SIDE_LENGTH, RAYCAST_PLANE_SIDE_LENGTH]}
-                    rotation={[-Math.PI / 2, 0, 0]}
-                    position={[0, -0.05, 0]}
-                    name="raycastPlane"
-                    visible={false}
-                >
-                    <meshBasicMaterial side={THREE.DoubleSide} transparent={true} opacity={0} depthWrite={false} />
-                </Plane>
-            </>
-        );
-    });
-SceneSetup.displayName = 'SceneSetup';
+    return { ground, shadowGenerator };
+}

@@ -1,54 +1,48 @@
 // src/components/ui/MiniMap.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import * as THREE from 'three';
-import type { TankRef } from '../game/Tank';
-import type { WallObjectData } from '../GameScene'; // Import WallData type from GameScene
+import { useState, useEffect, useRef, useCallback } from 'react'; // Removed unused React import
+import { Vector3, TransformNode, Scene } from '@babylonjs/core/Legacy/legacy';
+import type { WallObjectData } from '../game/MazeWall';
 import {
-    MINIMAP_SIZE_PX,
-    MINIMAP_VIEW_RANGE_RADIUS,
-    MINIMAP_PLAYER_DOT_COLOR,
-    MINIMAP_PLAYER_DOT_SIZE_PX,
-    MINIMAP_WALL_DOT_COLOR,
-    MINIMAP_WALL_DOT_MIN_SIZE_PX,
-    MINIMAP_BACKGROUND_COLOR,
-    MINIMAP_BORDER_COLOR,
-    MINIMAP_UPDATE_INTERVAL,
+    MINIMAP_SIZE_PX, MINIMAP_VIEW_RANGE_RADIUS, MINIMAP_PLAYER_DOT_COLOR,
+    MINIMAP_PLAYER_DOT_SIZE_PX, MINIMAP_WALL_DOT_COLOR, MINIMAP_WALL_DOT_MIN_SIZE_PX,
+    MINIMAP_BACKGROUND_COLOR, MINIMAP_BORDER_COLOR, MINIMAP_UPDATE_INTERVAL,
 } from '../../constants';
-import './MiniMap.css'; // We'll create this CSS file
+import './MiniMap.css';
 
 interface MiniMapProps {
-  tankRef: React.RefObject<TankRef | null>;
+  tankNode: TransformNode | null;
   walls: WallObjectData[];
+  scene: Scene | null;
 }
 
 interface MapDot {
   id: string;
-  x: number; // pixel coordinate on map
-  y: number; // pixel coordinate on map
-  size: number; // pixel size of dot
+  x: number;
+  y: number;
+  size: number;
   color: string;
   isPlayer: boolean;
 }
 
-const tankWorldPosVec = new THREE.Vector3(); // Reusable vector for tank's world position
-const wallCenterWorldPosVec = new THREE.Vector3(); // Reusable vector for wall's center
+const tankWorldPosVec = new Vector3();
 
-export function MiniMap({ tankRef, walls }: MiniMapProps) {
+export function MiniMap({ tankNode, walls, scene }: MiniMapProps) {
   const [mapDots, setMapDots] = useState<MapDot[]>([]);
   const lastUpdateTime = useRef(0);
+  const animationFrameId = useRef<number>(0);
 
   const mapRadiusPx = MINIMAP_SIZE_PX / 2;
 
   const calculateMapDots = useCallback(() => {
-    const tank = tankRef.current;
-    if (!tank || !tank.group) {
+    if (!tankNode) {
+      setMapDots([]);
       return;
     }
 
-    tank.group.getWorldPosition(tankWorldPosVec);
+    // Corrected: Use getAbsolutePosition() to get world position
+    tankWorldPosVec.copyFrom(tankNode.getAbsolutePosition());
     const newDots: MapDot[] = [];
 
-    // Player dot (always at the center of the minimap)
     newDots.push({
       id: 'player',
       x: mapRadiusPx,
@@ -58,31 +52,21 @@ export function MiniMap({ tankRef, walls }: MiniMapProps) {
       isPlayer: true,
     });
 
-    // Wall dots
     for (const wall of walls) {
-      wallCenterWorldPosVec.copy(wall.position); // Walls are positioned by their center already
+      const relX = wall.position.x - tankWorldPosVec.x;
+      const relZ = wall.position.z - tankWorldPosVec.z;
 
-      // Calculate wall's position relative to the tank on the XZ plane
-      const relX = wallCenterWorldPosVec.x - tankWorldPosVec.x;
-      const relZ = wallCenterWorldPosVec.z - tankWorldPosVec.z;
-
-      // Check if wall is within minimap's view range (distance check)
       const distanceToWallSq = relX * relX + relZ * relZ;
-      const wallMaxDim = Math.max(wall.size.x, wall.size.z) / 2; // half of max horizontal dimension
+      const wallMaxDim = Math.max(wall.size.x, wall.size.z) / 2;
+
       if (distanceToWallSq < (MINIMAP_VIEW_RANGE_RADIUS + wallMaxDim) ** 2) {
-        // Convert relative world coords to map pixel coords
-        // World +X (right) is Map +X
-        // World +Z (forward/away from camera at start) is Map +Y (down on map)
         const mapX = mapRadiusPx + (relX / MINIMAP_VIEW_RANGE_RADIUS) * mapRadiusPx;
         const mapY = mapRadiusPx + (relZ / MINIMAP_VIEW_RANGE_RADIUS) * mapRadiusPx;
 
-        // Calculate size of wall dot on map (proportional to its world size)
         const wallMapSizeX = (wall.size.x / MINIMAP_VIEW_RANGE_RADIUS) * mapRadiusPx;
         const wallMapSizeZ = (wall.size.z / MINIMAP_VIEW_RANGE_RADIUS) * mapRadiusPx;
-        // For a dot, we can take an average or max, let's use max for visibility
-        const dotSize = Math.max(MINIMAP_WALL_DOT_MIN_SIZE_PX, (wallMapSizeX + wallMapSizeZ) / 2 * 0.7); // 0.7 factor to make them a bit smaller
+        const dotSize = Math.max(MINIMAP_WALL_DOT_MIN_SIZE_PX, (wallMapSizeX + wallMapSizeZ) / 2 * 0.7);
 
-        // Ensure the dot itself is somewhat within the circular boundary to avoid harsh clips
         const distFromMapCenterSq = (mapX - mapRadiusPx)**2 + (mapY - mapRadiusPx)**2;
         if (distFromMapCenterSq < (mapRadiusPx - dotSize / 2)**2) {
            newDots.push({
@@ -97,10 +81,11 @@ export function MiniMap({ tankRef, walls }: MiniMapProps) {
       }
     }
     setMapDots(newDots);
-  }, [tankRef, walls, mapRadiusPx]);
-
+  }, [tankNode, walls, mapRadiusPx]);
 
   useEffect(() => {
+    if (!scene) return;
+
     const updateLoop = () => {
         const now = performance.now();
         if (now - lastUpdateTime.current > MINIMAP_UPDATE_INTERVAL) {
@@ -110,13 +95,14 @@ export function MiniMap({ tankRef, walls }: MiniMapProps) {
         animationFrameId.current = requestAnimationFrame(updateLoop);
     };
 
-    let animationFrameId = { current: requestAnimationFrame(updateLoop) }; // Keep as object for closure
+    animationFrameId.current = requestAnimationFrame(updateLoop);
 
     return () => {
       cancelAnimationFrame(animationFrameId.current);
     };
-  }, [calculateMapDots]);
+  }, [calculateMapDots, scene]);
 
+  if (!tankNode) return null;
 
   return (
     <div
@@ -133,12 +119,12 @@ export function MiniMap({ tankRef, walls }: MiniMapProps) {
           key={dot.id}
           className="minimap-dot"
           style={{
-            left: `${dot.x - dot.size / 2}px`, // Center the dot
+            left: `${dot.x - dot.size / 2}px`,
             top: `${dot.y - dot.size / 2}px`,
             width: `${dot.size}px`,
             height: `${dot.size}px`,
             backgroundColor: dot.color,
-            borderRadius: dot.isPlayer ? '50%' : '2px', // Player is circle, walls are squares
+            borderRadius: dot.isPlayer ? '50%' : '2px',
             zIndex: dot.isPlayer ? 10 : 5,
           }}
         />

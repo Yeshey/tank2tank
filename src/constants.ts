@@ -37,7 +37,7 @@ export const LERP_ALPHA_LINEAR = 0.15; // Adjust for desired acceleration "feel"
 // Target angular speed for PIVOT turns (A/D only)
 export const TARGET_PIVOT_ANGULAR_VELOCITY = Math.PI * 1.8; // Radians per second (fast pivot, ~324 deg/s)
 // Target angular speed when TURNING WHILE MOVING (W+A/D)
-export const TARGET_MOVING_TURN_ANGULAR_VELOCITY = Math.PI * 1.5; // Radians per second (~270 deg/s)
+export const TARGET_MOVING_TURN_ANGULAR_VELOCITY = Math.PI * 1.1; // Radians per second (~270 deg/s)
 // How quickly the tank reaches its target angular speed using Lerp.
 export const LERP_ALPHA_ANGULAR = 0.20; // Adjust for desired turning "feel"
 
@@ -51,7 +51,7 @@ export const DAMPING_EFFECT_MULTIPLIER = 15;
 
 
 // Turret Aiming
-export const TURRET_ROTATE_SPEED = Math.PI * 1.5; // Radians per second for turret rotation
+export const TURRET_ROTATE_SPEED = Math.PI * 0.8; // Radians per second for turret rotation
 
 // Camera Settings
 export const CAMERA_INITIAL_TARGET_OFFSET = new BABYLON.Vector3(0, 1, 0);

@@ -28,16 +28,21 @@ export const WHEEL_SPACING = 0.65;
 export const WHEEL_Y_OFFSET = -(BODY_HEIGHT / 2) + WHEEL_RADIUS * 0.8;
 export const WHEEL_X_OFFSET = BODY_WIDTH / 2;
 
-// Tank Movement Physics (These will likely need tuning for Havok/Babylon.js physics)
-export const MOVE_FORCE = 15000; // Havok forces might need different scaling
-export const TURN_TORQUE = 10000; // Havok torques might need different scaling
-export const BRAKE_FORCE_MULTIPLIER = 0.8; // Affects how quickly linear velocity is damped
-export const BRAKE_TORQUE_MULTIPLIER = 0.9; // Affects how quickly angular velocity is damped
-export const MAX_LINEAR_VELOCITY = 12;
-export const MAX_ANGULAR_VELOCITY = 2.5; // Radians/sec
+// Tank Movement Physics
+export const MOVE_FORCE = 30000; // Increased for more acceleration
+export const TURN_TORQUE = 20000; // Increased for more responsive turning, acts as base for angular impulse
+export const BRAKE_FORCE_MULTIPLIER = 0.9; // Affects how quickly linear velocity is damped by braking
+export const BRAKE_TORQUE_MULTIPLIER = 0.9; // Affects how quickly angular velocity is damped by braking
+export const MAX_LINEAR_VELOCITY = 20; // Increased top speed
+export const MAX_ANGULAR_VELOCITY = Math.PI; // Radians/sec (approx 180 deg/s), increased for faster pivoting
+
+// Factors for active braking impulses when keys are released
+export const BRAKING_LINEAR_FACTOR = 60; // Multiplier for linear braking impulse
+export const BRAKING_ANGULAR_FACTOR = 30; // Multiplier for angular braking impulse
+
 
 // Turret Aiming
-export const TURRET_ROTATE_SPEED = Math.PI * 0.05; // Radians per second
+export const TURRET_ROTATE_SPEED = Math.PI * 0.75; // Radians per second (approx 135 deg/s), this is the max constant speed
 
 // Camera Settings (These will be adapted for Babylon.js cameras)
 export const CAMERA_INITIAL_TARGET_OFFSET = new BABYLON.Vector3(0, 1, 0); // Look slightly above tank base
@@ -81,7 +86,7 @@ export const MINIMAP_BORDER_COLOR = '#495057';
 export const MINIMAP_UPDATE_INTERVAL = 100; // ms
 
 // Physics
-export const DEFAULT_FRICTION = 0.5;
+export const DEFAULT_FRICTION = 0.8; // Increased for less sliding
 export const DEFAULT_RESTITUTION = 0.1; // Bounciness
 export const TANK_MASS = 1500; // Kilograms
 export const WALL_MASS = 0; // Static
@@ -109,5 +114,5 @@ export const USE_ASPECT_RATIO_FOR_PAN = true;
 export const MIN_CAMERA_Z_OFFSET_FOR_FULL_PAN = 10.0; // If camera is closer than 10 units (abs Z), Z-pan is reduced.
 export const Z_PAN_SCALING_AT_MIN_CZO = 0.3;      // At very close distances, Z-pan is scaled by this factor (e.g., 30%).
 
-export const POSITION_LERP_FACTOR = 0.06; // Smoothing for camera position (0.01 to 0.1 is common)
-export const LOOK_AT_LERP_FACTOR = 0.1;   // Smoothing for look-at target
+export const POSITION_LERP_FACTOR = 0.08; // Smoothing for camera position (0.01 to 0.1 is common), slightly increased for faster tank
+export const LOOK_AT_LERP_FACTOR = 0.12;   // Smoothing for look-at target, slightly increased
